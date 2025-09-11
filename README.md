@@ -410,7 +410,16 @@ curl https://your-domain.com/health
 curl https://your-domain.com/.well-known/oauth-authorization-server
 ```
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Diagrams
+
+Quick diagram references (export SVGs to PNG as needed):
+
+- Architecture (SSE/WS/OAuth): `screenshots/architecture-diagram.svg`
+- OAuth 2.1 + PKCE (English): `screenshots/oa2-flow-diagram.svg`
+- תרשים OAuth 2.1 + PKCE (עברית): `screenshots/oa2-flow-diagram-he.svg`
+
+Tip: Export to PNG with Inkscape for high-DPI posting:
+`inkscape screenshots/architecture-diagram.svg --export-type=png --export-filename=screenshots/architecture-diagram.png --export-dpi=192`
 
 ![System Architecture](screenshots/system-architecture.png)
 *Diagram: Complete system architecture and data flow*
