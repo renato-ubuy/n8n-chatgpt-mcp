@@ -699,6 +699,106 @@ const httpServer = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ providers: [] }));
     return;
   }
+
+  // Admin Dashboard (HTML UI) — list/add/test/default/delete hosts
+  if (req.method === 'GET' && normalizedPath === '/admin') {
+    const sessionCookie = req.headers.cookie?.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
+    if (!sessionCookie || !verifyAdminSession(sessionCookie)) {
+      res.writeHead(302, { Location: '/oauth/authorize?client_id=admin&redirect_uri=/admin&state=admin&scope=mcp' });
+      res.end();
+      return;
+    }
+    const page = `<!doctype html>
+<html>
+<head>
+  <meta charset=\"utf-8\" />
+  <title>N8N Hosts Admin</title>
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <style>
+    body{font-family: system-ui, -apple-system, Segoe UI, Arial; margin:0; padding:24px; background:#f6f8fb; color:#243447}
+    h1{margin:0 0 8px 0}
+    .wrap{max-width:960px; margin:0 auto}
+    .card{background:#fff; border:1px solid #dde3ea; border-radius:10px; padding:16px; margin:16px 0}
+    .row{display:flex; gap:12px; flex-wrap:wrap}
+    input,button{padding:10px; font-size:14px}
+    input{border:1px solid #cbd5e1; border-radius:8px; flex:1}
+    button{border:0; border-radius:8px; background:#1f78d1; color:#fff; cursor:pointer}
+    button.secondary{background:#6b7280}
+    table{width:100%; border-collapse:collapse; margin-top:12px}
+    th,td{padding:8px 10px; border-bottom:1px solid #ecf0f4; text-align:left}
+    .pill{padding:2px 8px; border-radius:999px; font-size:12px; background:#e8f2ff; border:1px solid #1f78d1; display:inline-block}
+    .actions button{margin-right:6px; margin-top:6px}
+    .muted{color:#6b7280}
+  </style>
+  <script>
+    async function fetchJSON(url, opts={}){ const r=await fetch(url, {credentials:'include', ...opts}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+    async function load(){
+      try{
+        const data = await fetchJSON('/admin/api/hosts');
+        const tbody = document.querySelector('#hosts');
+        tbody.innerHTML='';
+        (data.hosts||[]).forEach(h=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${h.name}</strong><div class=\\"muted\\">${h.id}</div></td>
+            <td>${h.url}</td>
+            <td>${h.apiKey}</td>
+            <td>${h.createdAt ? h.createdAt.replace('T',' ').slice(0,19) : ''}</td>
+            <td>${h.id===data.defaultHostId?'<span class=\\"pill\\">Default</span>':''}</td>
+            <td class=\\"actions\\">
+              <button onclick=\\"testHost('${h.id}')\\">Test</button>
+              <button onclick=\\"setDefault('${h.id}')\\">Make Default</button>
+              <button class=\\"secondary\\" onclick=\\"delHost('${h.id}')\\">Delete</button>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(e){ alert('Failed loading hosts: '+e.message); }
+    }
+    async function addHost(ev){ ev&&ev.preventDefault();
+      const name=document.querySelector('#name').value.trim();
+      const url=document.querySelector('#url').value.trim();
+      const apiKey=document.querySelector('#apiKey').value.trim();
+      if(!name||!url||!apiKey) return alert('Please fill name, url and apiKey');
+      try{ await fetchJSON('/admin/api/hosts',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,url,apiKey})});
+        document.querySelector('#name').value=''; document.querySelector('#url').value=''; document.querySelector('#apiKey').value='';
+        await load();
+      }catch(e){ alert('Failed adding host: '+e.message); }
+    }
+    async function testHost(id){ try{ const r=await fetchJSON('/admin/api/hosts/'+id+'/test',{method:'POST'}); alert('OK: '+JSON.stringify(r)); }catch(e){ alert('Failed: '+e.message); } }
+    async function setDefault(id){ try{ await fetchJSON('/admin/api/hosts/'+id+'/default',{method:'POST'}); await load(); }catch(e){ alert('Failed: '+e.message); } }
+    async function delHost(id){ if(!confirm('Delete host?')) return; try{ await fetchJSON('/admin/api/hosts/'+id',{method:'DELETE'}); await load(); }catch(e){ alert('Failed: '+e.message); } }
+    window.addEventListener('DOMContentLoaded', load);
+  </script>
+</head>
+<body>
+  <div class=\"wrap\">
+    <h1>N8N Hosts Admin</h1>
+    <div class=\"muted\">Manage multiple N8N API hosts for the MCP server</div>
+    <div class=\"card\">
+      <h3>Add Host</h3>
+      <form onsubmit=\"addHost(event)\">
+        <div class=\"row\">
+          <input id=\"name\" placeholder=\"Name (e.g. Prod)\" />
+          <input id=\"url\" placeholder=\"N8N Base URL (https://n8n.example.com)\" />
+          <input id=\"apiKey\" placeholder=\"API Key\" />
+          <button type=\"submit\">Add</button>
+        </div>
+      </form>
+    </div>
+    <div class=\"card\">
+      <h3>Hosts</h3>
+      <table>
+        <thead><tr><th>Name</th><th>URL</th><th>API Key</th><th>Created</th><th>Default</th><th>Actions</th></tr></thead>
+        <tbody id=\"hosts\"></tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>`;
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(page);
+    return;
+  }
   
   // OAuth discovery endpoint
   if (req.method === 'GET' && normalizedPath === '/.well-known/oauth-authorization-server') {
@@ -927,7 +1027,8 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
     
-    // User not authenticated, show login form
+    // User not authenticated, show login form (prefill with default host if present)
+    const defaultHost = hostsData.hosts.find(h => h.id === hostsData.defaultHostId);
     const loginPage = `
 <!DOCTYPE html>
 <html>
@@ -975,14 +1076,14 @@ const httpServer = http.createServer(async (req, res) => {
             
             <hr style="margin: 20px 0; border: 1px solid #ddd;">
             
-            <div class="form-group">
-                <label for="n8n_host">N8N Host URL:</label>
-                <input type="url" id="n8n_host" name="n8n_host" placeholder="https://your-n8n-instance.com" required>
+            <div class=\"form-group\">
+                <label for=\"n8n_host\">N8N Host URL:</label>
+                <input type=\"url\" id=\"n8n_host\" name=\"n8n_host\" placeholder=\"https://your-n8n-instance.com\" value=\"${defaultHost ? defaultHost.url : ''}\" required>
             </div>
             
-            <div class="form-group">
-                <label for="n8n_api_key">N8N API Key:</label>
-                <input type="password" id="n8n_api_key" name="n8n_api_key" placeholder="Your N8N API Key" required>
+            <div class=\"form-group\">
+                <label for=\"n8n_api_key\">N8N API Key:</label>
+                <input type=\"password\" id=\"n8n_api_key\" name=\"n8n_api_key\" placeholder=\"Your N8N API Key\" value=\"${defaultHost ? defaultHost.apiKey : ''}\" required>
             </div>
             
             <button type="submit" class="btn">Login &amp; Authorize</button>
