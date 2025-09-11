@@ -218,6 +218,24 @@ interface PluginMarketplace {
 ## 🏗️ Technical Architecture Evolution
 
 ### Current Architecture (1.x)
+
+---
+
+## 🖥️ Planned: Admin Dashboard for N8N API Hosts
+
+We will introduce a simple admin dashboard (inspired by `ha-mcp-bridge`) to manage multiple N8N hosts used by the MCP server.
+
+Scope
+- CRUD for N8N hosts (friendly name, base URL, API key)
+- Connectivity tests and status
+- Default host selection per session/server
+- JSON persistence under `/app/data/n8n-hosts.json`
+- Minimal UI at `/admin`, secured via existing admin credentials
+
+Phases
+1. Storage + REST endpoints
+2. Basic HTML UI (no heavy frontend framework)
+3. MCP tool integration (list/switch hosts)
 ```mermaid
 graph TB
     A[Claude.ai] --> B[Right API Gateway]

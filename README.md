@@ -14,6 +14,8 @@ Works over HTTP(S) using SSE or WebSocket and provides an OAuth flow for browser
 - [🔐 Authentication Flow](#-authentication-flow)
 - [🚀 Production Deployment](#-production-deployment)
 - [🏗️ Architecture](#️-architecture)
+ - [🏗️ Architecture](#️-architecture)
+ - [🖥️ Admin Dashboard (Planned)](#️-admin-dashboard-planned)
 - [🔧 Troubleshooting](#-troubleshooting)
 - [🤝 Contributing](#-contributing)
 - [💬 Support](#-support)
@@ -39,6 +41,7 @@ Works over HTTP(S) using SSE or WebSocket and provides an OAuth flow for browser
 - 🐳 **Docker Ready** - Containerized deployment with Traefik integration
 - 🔌 **WebSocket Transport** - Native WS endpoint for ChatGPT Connectors
 - 🌊 **SSE Transport** - SSE endpoint compatible with ChatGPT Connectors
+- 🖥️ **Admin Dashboard (planned)** - Manage multiple N8N API hosts (add/remove, test, set defaults) similar to ha-mcp-bridge
 
 ## 🧩 ChatGPT Connector (SSE)
 
@@ -423,6 +426,16 @@ Tip: Export to PNG with Inkscape for high-DPI posting:
 
 ![System Architecture](screenshots/system-architecture.png)
 *Diagram: Complete system architecture and data flow*
+
+## 🖥️ Admin Dashboard (Planned)
+
+A lightweight admin dashboard — similar to our `ha-mcp-bridge` — will let you manage multiple N8N API hosts centrally:
+- Add/remove/update N8N hosts (name, URL, API key)
+- Test connectivity and set a default host per session/server
+- Persistence under `/app/data/n8n-hosts.json`
+- Protected route (planned): `/admin` (using `ADMIN_USERNAME`/`ADMIN_PASSWORD`)
+
+See docs/DASHBOARD.md for the sketch and API plan.
 
 ```mermaid
 graph TD
