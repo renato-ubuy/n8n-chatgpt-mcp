@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2c3e50"/>
+    </marker>
+    <style>
+      .box { fill:#f7f9fc; stroke:#2c3e50; stroke-width:2; rx:10; }
+      .title { font: 700 16px system-ui, -apple-system, Segoe UI, Arial; fill:#2c3e50; }
+      .small { font: 400 13px system-ui, -apple-system, Segoe UI, Arial; fill:#34495e; }
+      .link { font: 600 13px system-ui, -apple-system, Segoe UI, Arial; fill:#1f78d1; }
+      .label { font: 600 12px system-ui, -apple-system, Segoe UI, Arial; fill:#2c3e50; }
+      .pill { fill:#e8f2ff; stroke:#1f78d1; stroke-width:1; rx:6; }
+    </style>
+  </defs>
+
+  <!-- Header -->
+  <text x="600" y="40" text-anchor="middle" class="title">N8N + ChatGPT/Claude MCP Architecture (SSE / WS / OAuth)</text>
+
+  <!-- Left column: Clients -->
+  <rect class="box" x="40" y="90" width="270" height="120"/>
+  <text class="title" x="60" y="120">ChatGPT (Browser)</text>
+  <text class="small" x="60" y="145">Connector → SSE</text>
+  <text class="small" x="60" y="165">Origins: chat.openai.com, chatgpt.com</text>
+
+  <rect class="box" x="40" y="250" width="270" height="120"/>
+  <text class="title" x="60" y="280">Claude (Browser)</text>
+  <text class="small" x="60" y="305">OAuth + SSE/WS</text>
+  <text class="small" x="60" y="325">Origin: claude.ai</text>
+
+  <!-- Middle: Edge / Traefik -->
+  <rect class="box" x="360" y="150" width="220" height="120"/>
+  <text class="title" x="380" y="180">Traefik (TLS)</text>
+  <text class="small" x="380" y="205">Router + Middlewares</text>
+  <text class="small" x="380" y="225">CORS allowlist → ${CORS_ORIGIN}</text>
+
+  <!-- Right: MCP Server modes -->
+  <rect class="box" x="640" y="90" width="500" height="200"/>
+  <text class="title" x="660" y="120">N8N MCP Server</text>
+  <text class="small" x="660" y="145">Host: n8n-mcp.right-api.com</text>
+  <text class="small" x="660" y="165">Modes: SSE (3004) / WS (3006) / OAuth (3007)</text>
+
+  <!-- Pills for endpoints -->
+  <rect class="pill" x="660" y="185" width="140" height="26"/>
+  <text class="label" x="670" y="202">SSE: /sse, /sse/message</text>
+  <rect class="pill" x="810" y="185" width="100" height="26"/>
+  <text class="label" x="820" y="202">WS: /ws (mcp)</text>
+  <rect class="pill" x="920" y="185" width="120" height="26"/>
+  <text class="label" x="930" y="202">OAuth: /oauth</text>
+
+  <!-- Far right: n8n API -->
+  <rect class="box" x="640" y="330" width="500" height="120"/>
+  <text class="title" x="660" y="360">n8n API</text>
+  <text class="small" x="660" y="385">/api/v1/*</text>
+  <text class="small" x="660" y="405">Auth: X-N8N-API-KEY / Bearer</text>
+
+  <!-- Lines and arrows -->
+  <!-- ChatGPT -> Traefik (HTTPS) -->
+  <line x1="310" y1="150" x2="360" y2="170" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="320" y="145">HTTPS</text>
+
+  <!-- Claude -> Traefik (HTTPS) -->
+  <line x1="310" y1="310" x2="360" y2="260" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="320" y="300">HTTPS</text>
+
+  <!-- Traefik -> MCP Server -->
+  <line x1="580" y1="210" x2="640" y2="190" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="590" y="230">Route: /sse, /ws, /oauth</text>
+
+  <!-- MCP Server -> n8n API -->
+  <line x1="890" y1="290" x2="890" y2="330" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="900" y="315">Internal HTTPS</text>
+
+  <!-- CORS note -->
+  <text class="small" x="40" y="420">CORS allowlist example: https://chat.openai.com, https://chatgpt.com, https://n8n-mcp.right-api.com</text>
+  <text class="small" x="40" y="445">SSE session: GET /sse (Accept: text/event-stream), POST /sse/message (mcp-session-id)</text>
+  <text class="small" x="40" y="470">Credentials persisted (optional): /app/data/n8n-credentials.json</text>
+
+</svg>
+

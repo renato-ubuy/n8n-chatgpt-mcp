@@ -11,7 +11,12 @@ Image suggestions
   - screenshots/claude-ai-integrations.png — Adding an MCP integration in Claude
   - screenshots/claude-tools-available.png — Tools list visible in Claude
   - screenshots/workflow-list-example.png — n8n workflows displayed in chat
-  - A simple architecture diagram (if you have one)
+  - screenshots/architecture-diagram.svg — Simple architecture diagram (export to PNG for posting)
+
+Exporting SVG → PNG
+- Option 1: Open the SVG in a browser and “Print” to PDF/PNG (or take a high‑DPI screenshot)
+- Option 2: Use Inkscape locally:
+  - `inkscape screenshots/architecture-diagram.svg --export-type=png --export-filename=screenshots/architecture-diagram.png --export-dpi=192`
 
 Post templates
 - Hebrew: LINKEDIN_POST_HEBREW_CHATGPT_MCP.md

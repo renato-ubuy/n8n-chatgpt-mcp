@@ -26,6 +26,7 @@ Please capture the following screenshots according to the [Screenshot Guide](../
 - [ ] `system-architecture.png` - Complete system architecture
 - [ ] `integration-overview.png` - High-level integration overview
 - [ ] `github-support.png` - GitHub issues/support page
+ - [x] `architecture-diagram.svg` - Simple architecture diagram (export to PNG if needed)
 
 ## Screenshot Guidelines
 
