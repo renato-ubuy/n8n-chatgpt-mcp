@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="strokeWidth" markerWidth="8" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2c3e50"/>
+    </marker>
+    <style>
+      .box { fill:#f7f9fc; stroke:#2c3e50; stroke-width:2; rx:10; }
+      .title { font: 700 16px system-ui, -apple-system, Segoe UI, Arial; fill:#2c3e50; }
+      .small { font: 400 13px system-ui, -apple-system, Segoe UI, Arial; fill:#34495e; }
+      .label { font: 600 12px system-ui, -apple-system, Segoe UI, Arial; fill:#2c3e50; }
+    </style>
+  </defs>
+
+  <text x="600" y="40" text-anchor="middle" class="title">תרשים OAuth 2.1 + PKCE (עברית)</text>
+
+  <!-- שחקנים -->
+  <rect class="box" x="60" y="100" width="260" height="90"/>
+  <text class="title" x="80" y="130">דפדפן (Claude)</text>
+  <text class="small" x="80" y="155">מקור: claude.ai</text>
+
+  <rect class="box" x="470" y="100" width="260" height="90"/>
+  <text class="title" x="490" y="130">שרת OA2 של MCP</text>
+  <text class="small" x="490" y="155">נתיבים: /oauth/*</text>
+
+  <rect class="box" x="880" y="100" width="260" height="90"/>
+  <text class="title" x="900" y="130">התחברות מנהל + הסכמה</text>
+  <text class="small" x="900" y="155">פרטי n8n (Host + API Key)</text>
+
+  <!-- שלבים שורה עליונה -->
+  <line x1="320" y1="145" x2="470" y2="145" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="335" y="135">GET /oauth/authorize</text>
+
+  <line x1="730" y1="145" x2="880" y2="145" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="745" y="135">התחברות + הסכמה</text>
+
+  <line x1="880" y1="185" x2="730" y2="230" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="745" y="215">302 חזרה עם קוד</text>
+
+  <rect class="box" x="470" y="220" width="260" height="90"/>
+  <text class="title" x="490" y="250">קוד הונפק</text>
+  <text class="small" x="490" y="275">PKCE code_challenge נשמר</text>
+
+  <!-- החלפת קוד בטוקן -->
+  <line x1="320" y1="265" x2="470" y2="265" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="330" y="255">POST /oauth/token</text>
+  <text class="small" x="335" y="285">code + code_verifier</text>
+
+  <rect class="box" x="470" y="340" width="260" height="90"/>
+  <text class="title" x="490" y="370">Access Token</text>
+  <text class="small" x="490" y="395">תוקף + שמירה</text>
+
+  <line x1="470" y1="385" x2="320" y2="385" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="335" y="375">200 { access_token }</text>
+
+  <!-- שימוש בסשן מאומת -->
+  <rect class="box" x="60" y="460" width="260" height="120"/>
+  <text class="title" x="80" y="490">סשן MCP</text>
+  <text class="small" x="80" y="515">SSE / WS</text>
+
+  <rect class="box" x="470" y="460" width="260" height="120"/>
+  <text class="title" x="490" y="490">שרת MCP</text>
+  <text class="small" x="490" y="515">אימות באמצעות Access Token</text>
+
+  <line x1="320" y1="520" x2="470" y2="520" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="335" y="510">tools/list, tools/call …</text>
+
+  <rect class="box" x="880" y="460" width="260" height="120"/>
+  <text class="title" x="900" y="490">n8n API</text>
+  <text class="small" x="900" y="515">/api/v1/* (X-N8N-API-KEY)</text>
+
+  <line x1="730" y1="520" x2="880" y2="520" stroke="#2c3e50" stroke-width="2" marker-end="url(#arrow)"/>
+  <text class="label" x="740" y="510">ניהול וורקפלו/הרצות</text>
+
+</svg>
+

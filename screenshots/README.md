@@ -21,12 +21,13 @@ Please capture the following screenshots according to the [Screenshot Guide](../
 
 ### Technical Documentation
 - [ ] `server-logs.png` - Debug console and server logs
-- [ ] `oauth-flow-diagram.png` - OAuth flow diagram
+- [x] `oa2-flow-diagram.svg` - OAuth flow diagram (English)
+- [x] `oa2-flow-diagram-he.svg` - תרשים OAuth (עברית)
 - [ ] `deployment-architecture.png` - Production deployment diagram
 - [ ] `system-architecture.png` - Complete system architecture
 - [ ] `integration-overview.png` - High-level integration overview
 - [ ] `github-support.png` - GitHub issues/support page
- - [x] `architecture-diagram.svg` - Simple architecture diagram (export to PNG if needed)
+- [x] `architecture-diagram.svg` - Simple architecture diagram (export to PNG if needed)
 
 ## Screenshot Guidelines
 

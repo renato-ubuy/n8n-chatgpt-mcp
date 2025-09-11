@@ -12,6 +12,8 @@ Image suggestions
   - screenshots/claude-tools-available.png — Tools list visible in Claude
   - screenshots/workflow-list-example.png — n8n workflows displayed in chat
   - screenshots/architecture-diagram.svg — Simple architecture diagram (export to PNG for posting)
+  - screenshots/oa2-flow-diagram.svg — OAuth 2.1 + PKCE (English)
+  - screenshots/oa2-flow-diagram-he.svg — תרשים OAuth (עברית)
 
 Exporting SVG → PNG
 - Option 1: Open the SVG in a browser and “Print” to PDF/PNG (or take a high‑DPI screenshot)
