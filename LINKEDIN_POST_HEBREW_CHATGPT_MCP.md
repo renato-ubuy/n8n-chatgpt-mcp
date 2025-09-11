@@ -1,4 +1,4 @@
-# פוסט לינקדאין (עברית) — N8N + ChatGPT/Claude MCP
+N8N + ChatGPT/Claude MCP
 
 שלום לכולם! 🚀
 
