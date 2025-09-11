@@ -64,6 +64,46 @@ Notes:
 - Set `CORS_ORIGIN` to a comma-separated allowlist. Use the exact origins ChatGPT uses (currently `https://chat.openai.com` and/or `https://chatgpt.com`).
 - The server persists `N8N_HOST`/`N8N_API_KEY` under `/app/data/n8n-credentials.json` when set via the `set_n8n_credentials` tool or SSE `?n8n_host=&n8n_key=` query.
 
+### 🔎 Quick Curl Test (SSE)
+
+1) Start the SSE server (compose or `MCP_MODE=sse PORT=3004`).
+
+2) In one terminal, open the SSE stream and note the session id from the first event lines (look for `id:`):
+
+```
+curl -N -H "Accept: text/event-stream" \
+  https://n8n-mcp.right-api.com/sse
+```
+
+3) In another terminal, post a JSON-RPC request to list tools. Replace SESSION_ID with the id captured from step 2:
+
+```
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "mcp-session-id: SESSION_ID" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"1",
+    "method":"tools/list"
+  }' \
+  https://n8n-mcp.right-api.com/sse/message
+```
+
+You should receive a JSON-RPC result with the available tools. You can then call a tool, e.g.:
+
+```
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -H "mcp-session-id: SESSION_ID" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":"2",
+    "method":"tools/call",
+    "params": {"name":"get_n8n_status","arguments":{}}
+  }' \
+  https://n8n-mcp.right-api.com/sse/message
+```
+
 ## 🛠️ Available Tools
 
 The MCP server provides 9 N8N tools for workflow automation:
