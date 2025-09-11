@@ -1,0 +1,247 @@
+version: '3.8'
+
+services:
+  # Right API Website
+  right-api-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: right-api-website
+    restart: unless-stopped
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    
+    # Temporary filesystems for nginx
+    tmpfs:
+      - /var/cache/nginx:noexec,nosuid,size=100m
+      - /var/run:noexec,nosuid,size=100m
+      - /tmp:noexec,nosuid,size=100m
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.2'
+        reservations:
+          memory: 32M
+          cpus: '0.1'
+    
+    # Environment variables
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+      - NGINX_WORKER_CONNECTIONS=1024
+    
+    # Traefik labels for routing
+    labels:
+      # Enable Traefik
+      - "traefik.enable=true"
+      
+      # Main domain routing
+      - "traefik.http.routers.right-api-web.rule=Host(`right-api.com`)"
+      - "traefik.http.routers.right-api-web.entrypoints=websecure"
+      - "traefik.http.routers.right-api-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.right-api-web.loadbalancer.server.port=80"
+      
+      # WWW redirect
+      - "traefik.http.routers.right-api-www.rule=Host(`www.right-api.com`)"
+      - "traefik.http.routers.right-api-www.entrypoints=websecure"
+      - "traefik.http.routers.right-api-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.right-api-www.middlewares=www-redirect"
+      
+      # Middleware for WWW redirect
+      - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www.right-api.com/(.*)"
+      - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://right-api.com/$${1}"
+      - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
+      
+      # HTTP to HTTPS redirect
+      - "traefik.http.routers.right-api-web-insecure.rule=Host(`right-api.com`) || Host(`www.right-api.com`)"
+      - "traefik.http.routers.right-api-web-insecure.entrypoints=web"
+      - "traefik.http.routers.right-api-web-insecure.middlewares=https-redirect"
+      
+      # Security headers middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      
+      # Apply security headers to main router
+      - "traefik.http.routers.right-api-web.middlewares=security-headers"
+      
+      # Rate limiting
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+      
+      # Compression
+      - "traefik.http.middlewares.gzip.compress=true"
+      
+      # Apply all middlewares
+      - "traefik.http.routers.right-api-web.middlewares=security-headers,rate-limit,gzip"
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: right-api-traefik
+    restart: unless-stopped
+    
+    # Command line arguments
+    command:
+      # API and dashboard
+      - "--api.dashboard=true"
+      - "--api.debug=false"
+      
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=right-api-network"
+      
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      
+      # Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-admin@right-api.com}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
+      
+      # Global redirect HTTP to HTTPS
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      
+      # Security
+      - "--global.sendanonymoususage=false"
+      - "--serversTransport.insecureSkipVerify=false"
+      
+      # Logging
+      - "--log.level=${TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+    
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - traefik_logs:/var/log/traefik
+    
+    # Environment variables
+    environment:
+      - TRAEFIK_LOG_LEVEL=${TRAEFIK_LOG_LEVEL:-INFO}
+    
+    # Traefik dashboard labels
+    labels:
+      - "traefik.enable=true"
+      
+      # Dashboard
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.right-api.com`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth"
+      
+      # Basic auth for dashboard
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH:-admin:$$2y$$10$$X7t0iYK8xAj.LG8zBFLrPOVXiY8m7C8qMm9yH1FvE5RpqjyZRqrWa}"
+      
+      # HTTPS redirect middleware
+      - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Security
+    security_opt:
+      - no-new-privileges:true
+
+  # Optional: Analytics and monitoring
+  plausible:
+    image: plausible/analytics:latest
+    container_name: right-api-analytics
+    restart: unless-stopped
+    profiles:
+      - analytics
+    
+    environment:
+      - BASE_URL=https://analytics.right-api.com
+      - SECRET_KEY_BASE=${PLAUSIBLE_SECRET:-generate-a-secret-key}
+      - DATABASE_URL=postgres://plausible:${PLAUSIBLE_DB_PASSWORD:-password}@plausible-db:5432/plausible
+      - CLICKHOUSE_DATABASE_URL=http://plausible-clickhouse:8123/plausible
+    
+    depends_on:
+      - plausible-db
+      - plausible-clickhouse
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.analytics.rule=Host(`analytics.right-api.com`)"
+      - "traefik.http.routers.analytics.entrypoints=websecure"
+      - "traefik.http.routers.analytics.tls.certresolver=letsencrypt"
+      - "traefik.http.services.analytics.loadbalancer.server.port=8000"
+
+  plausible-db:
+    image: postgres:14
+    container_name: right-api-analytics-db
+    restart: unless-stopped
+    profiles:
+      - analytics
+    
+    environment:
+      - POSTGRES_DB=plausible
+      - POSTGRES_USER=plausible
+      - POSTGRES_PASSWORD=${PLAUSIBLE_DB_PASSWORD:-password}
+    
+    volumes:
+      - plausible_db_data:/var/lib/postgresql/data
+
+  plausible-clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: right-api-analytics-clickhouse
+    restart: unless-stopped
+    profiles:
+      - analytics
+    
+    volumes:
+      - plausible_clickhouse_data:/var/lib/clickhouse
+
+volumes:
+  traefik_letsencrypt:
+    driver: local
+  traefik_logs:
+    driver: local
+  plausible_db_data:
+    driver: local
+  plausible_clickhouse_data:
+    driver: local
+
+networks:
+  default:
+    name: right-api-network
+    external: false

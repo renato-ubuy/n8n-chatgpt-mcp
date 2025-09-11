@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  # Main MCP Gateway service
+  right-api-gateway:
+    build: .
+    container_name: right-api-mcp-gateway
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DOMAIN=right-api.com
+      - SERVER_URL=https://right-api.com
+      - PORT=3000
+      - HOST=0.0.0.0
+      
+      # Database
+      - DATABASE_URL=postgresql://rightapi_user:${DB_PASSWORD}@postgres:5432/rightapi_gateway
+      
+      # Authentication
+      - AUTH_ENABLED=true
+      - JWT_SECRET=${JWT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      
+      # CORS for Claude.ai integration
+      - CORS_ORIGIN=https://claude.ai,https://right-api.com
+      
+      # Plugins
+      - PLUGINS_DIR=/app/plugins
+      - MARKETPLACE_URL=https://plugins.right-api.com
+      
+      # Rate limiting
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS_PER_MINUTE=200
+      
+    volumes:
+      - gateway_data:/app/data
+      - gateway_plugins:/app/plugins
+      - gateway_logs:/app/logs
+    
+    depends_on:
+      - postgres
+      - redis
+    
+    labels:
+      # Traefik labels for right-api.com
+      - "traefik.enable=true"
+      - "traefik.http.routers.right-api.rule=Host(`right-api.com`) || Host(`www.right-api.com`)"
+      - "traefik.http.routers.right-api.entrypoints=websecure"
+      - "traefik.http.routers.right-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.right-api.loadbalancer.server.port=3000"
+      
+      # Redirect www to non-www
+      - "traefik.http.routers.right-api-www.rule=Host(`www.right-api.com`)"
+      - "traefik.http.routers.right-api-www.entrypoints=websecure"
+      - "traefik.http.routers.right-api-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.right-api-www.middlewares=redirect-www"
+      - "traefik.http.middlewares.redirect-www.redirectregex.regex=^https://www.right-api.com/(.*)"
+      - "traefik.http.middlewares.redirect-www.redirectregex.replacement=https://right-api.com/$${1}"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: right-api-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=rightapi_gateway
+      - POSTGRES_USER=rightapi_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rightapi_user -d rightapi_gateway"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: right-api-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: right-api-traefik
+    restart: unless-stopped
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--global.sendAnonymousUsage=false"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_certs:/letsencrypt
+    labels:
+      # Traefik dashboard
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.right-api.com`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_AUTH}"
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: right-api-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.right-api.com`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: right-api-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_SERVER_DOMAIN=grafana.right-api.com
+      - GF_SERVER_ROOT_URL=https://grafana.right-api.com
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.right-api.com`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  # Documentation site
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    container_name: right-api-docs
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.docs.rule=Host(`docs.right-api.com`)"
+      - "traefik.http.routers.docs.entrypoints=websecure"
+      - "traefik.http.routers.docs.tls.certresolver=letsencrypt"
+      - "traefik.http.services.docs.loadbalancer.server.port=80"
+
+  # Plugin registry
+  plugin-registry:
+    build:
+      context: ./registry
+      dockerfile: Dockerfile
+    container_name: right-api-registry
+    restart: unless-stopped
+    environment:
+      - REGISTRY_DOMAIN=plugins.right-api.com
+      - DATABASE_URL=postgresql://rightapi_user:${DB_PASSWORD}@postgres:5432/rightapi_plugins
+    depends_on:
+      - postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.registry.rule=Host(`plugins.right-api.com`)"
+      - "traefik.http.routers.registry.entrypoints=websecure"
+      - "traefik.http.routers.registry.tls.certresolver=letsencrypt"
+
+volumes:
+  gateway_data:
+    driver: local
+  gateway_plugins:
+    driver: local
+  gateway_logs:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  traefik_certs:
+    driver: local
+
+networks:
+  default:
+    name: right-api-network

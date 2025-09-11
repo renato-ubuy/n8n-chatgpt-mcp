@@ -1,0 +1,42 @@
+import { EventEmitter } from 'events';
+import { MCPBackend, MCPBackendConfig, GatewayToken } from '../types/gateway';
+import { JsonRpcRequest, JsonRpcResponse } from '../types/mcp';
+export declare class GatewayService extends EventEmitter {
+    private backends;
+    private gatewayConfigs;
+    private backendRegistry;
+    private tokenService;
+    private identityService;
+    private pluginManager;
+    private workflowEngine;
+    private performanceMonitor;
+    private securityManager;
+    private authService;
+    private marketplace;
+    private rateLimiter;
+    constructor();
+    private initializeBuiltInBackends;
+    addBackend(config: MCPBackendConfig): Promise<MCPBackend>;
+    removeBackend(backendId: string): Promise<void>;
+    getBackend(backendId: string): MCPBackend | undefined;
+    getAllBackends(): MCPBackend[];
+    createGatewayToken(name: string, backendIds: string[], identityId: string, permissions?: string[], expiresAt?: Date): Promise<GatewayToken>;
+    handleMCPRequest(gatewayToken: string, request: JsonRpcRequest): Promise<JsonRpcResponse>;
+    private handleInitialize;
+    private handleToolsList;
+    private handleToolsCall;
+    private createErrorResponse;
+    private checkRateLimit;
+    private setupEventHandlers;
+    private handleWorkflowExecute;
+    private handlePluginsList;
+    private handlePluginInstall;
+    installPlugin(packageName: string, version?: string): Promise<any>;
+    uninstallPlugin(pluginId: string): Promise<void>;
+    getInstalledPlugins(): any[];
+    createWorkflow(definition: any): Promise<any>;
+    executeWorkflow(workflowId: string, input: any): Promise<any>;
+    getWorkflows(): any[];
+    destroy(): Promise<void>;
+}
+//# sourceMappingURL=gateway-service.d.ts.map

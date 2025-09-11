@@ -1,8 +1,8 @@
-# N8N MCP Server for Claude.ai Web Integration
+# N8N MCP Server for Claude.ai and ChatGPT
 
-🚀 **First-ever working MCP server that brings N8N workflow automation directly to Claude.ai web interface**
+🚀 Production-ready MCP server that brings N8N workflow automation to both Claude.ai and ChatGPT (via ChatGPT Connectors).
 
-This breakthrough implementation enables Claude.ai to directly manage N8N workflows through a secure, multi-tenant MCP server with OAuth 2.1 authentication. Unlike desktop-only solutions, this server works entirely through HTTP streaming, making N8N accessible from any Claude.ai web session.
+Works over HTTP(S) using SSE or WebSocket and provides an OAuth flow for browsers. SSE mode is compatible with ChatGPT Connectors, and OAuth/SSE modes work with Claude web.
 
 ## 📚 Table of Contents
 
@@ -37,6 +37,32 @@ This breakthrough implementation enables Claude.ai to directly manage N8N workfl
 - ⚡ **Real-time Execution Control** - Start, stop, and monitor workflow executions
 - 👥 **Multi-tenant Support** - Each user session maintains separate N8N credentials
 - 🐳 **Docker Ready** - Containerized deployment with Traefik integration
+- 🔌 **WebSocket Transport** - Native WS endpoint for ChatGPT Connectors
+- 🌊 **SSE Transport** - SSE endpoint compatible with ChatGPT Connectors
+
+## 🧩 ChatGPT Connector (SSE)
+
+For ChatGPT Connectors, run the SSE server variant and restrict CORS to ChatGPT domains.
+
+Environment (Docker or compose):
+
+```
+MCP_MODE=sse
+PORT=3004
+# Allow ChatGPT + your domain(s)
+CORS_ORIGIN=https://chat.openai.com,https://chatgpt.com,https://n8n-mcp.right-api.com
+# Optional: Preconfigure N8N (SSE also supports setting via tool or query params)
+N8N_HOST=https://your-n8n.example.com
+N8N_API_KEY=your-n8n-api-key
+```
+
+Endpoints:
+- GET SSE stream: `GET /sse` with `Accept: text/event-stream`
+- Send messages: `POST /sse/message` (or `/message`) with `sessionId`
+
+Notes:
+- Set `CORS_ORIGIN` to a comma-separated allowlist. Use the exact origins ChatGPT uses (currently `https://chat.openai.com` and/or `https://chatgpt.com`).
+- The server persists `N8N_HOST`/`N8N_API_KEY` under `/app/data/n8n-credentials.json` when set via the `set_n8n_credentials` tool or SSE `?n8n_host=&n8n_key=` query.
 
 ## 🛠️ Available Tools
 
@@ -78,7 +104,8 @@ Edit `.env` file with your settings:
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your-secure-password-hash
 SERVER_URL=https://your-domain.com
-CORS_ORIGIN=https://claude.ai
+# Allow Claude and/or ChatGPT
+CORS_ORIGIN=https://claude.ai,https://chat.openai.com,https://chatgpt.com
 
 # Optional (can be set via login form)
 N8N_HOST=https://your-n8n-instance.com
@@ -108,7 +135,7 @@ sudo dpkg -i cloudflared.deb
 docker run -d --name n8n-mcp-server -p 3005:3000 \
   -e ADMIN_USERNAME=admin \
   -e ADMIN_PASSWORD=your-secure-password-hash \
-  -e CORS_ORIGIN="https://claude.ai" \
+  -e CORS_ORIGIN="https://claude.ai,https://chat.openai.com,https://chatgpt.com" \
   your-built-image
 
 # Create instant HTTPS tunnel
@@ -183,7 +210,7 @@ Ask Claude: "Can you list my N8N workflows?"
 | `ADMIN_PASSWORD` | Admin password hash | Yes |
 | `N8N_HOST` | Default N8N instance URL | No* |
 | `N8N_API_KEY` | Default N8N API key | No* |
-| `CORS_ORIGIN` | Allowed CORS origins | Yes |
+| `CORS_ORIGIN` | Comma-separated list of allowed origins (e.g. `https://claude.ai,https://chat.openai.com,https://chatgpt.com`) | Yes |
 
 *N8N credentials can be provided via environment variables as fallback or entered dynamically during login.
 
@@ -196,6 +223,38 @@ The included `docker-compose.yml` provides:
 - Traefik reverse proxy integration
 - Automatic SSL certificates
 - Health checks
+
+## 🔌 ChatGPT Connector (WebSocket)
+
+ChatGPT Connectors work best over WebSocket. This repo now exposes a native WS endpoint:
+
+- WS endpoint: `wss://n8n-mcp.right-api.com/ws`
+- Health: `http://<your-host>/health`
+- Default port: `3006` (configurable via `PORT`)
+
+Steps:
+- Deploy the WS server: `node mcp-ws-server.js` (or bake into your container entrypoint)
+- In ChatGPT → Connectors → Add custom MCP server, use `wss://n8n-mcp.right-api.com/ws`
+- Set `N8N_HOST` and `N8N_API_KEY` in the container env so tools can call your n8n instance
+
+Notes:
+- If you are behind a reverse proxy (Traefik), ensure WebSocket upgrade is enabled for the `/ws` path.
+- For production, prefer `wss://` with TLS termination at your proxy.
+- HTTP→HTTPS redirect is configured for host `n8n-mcp.right-api.com`.
+
+### Traefik example (labels)
+
+Labels used in docker-compose.standalone.yml:
+
+- `traefik.http.routers.n8n-mcp-ws.rule=Host(\`n8n-mcp.right-api.com\`) && PathPrefix(\`/ws\`)`
+- `traefik.http.services.n8n-mcp-ws.loadbalancer.server.port=3006`
+- Optional headers to force upgrade:
+  - `traefik.http.middlewares.n8n-mcp-ws-headers.headers.customrequestheaders.Upgrade=websocket`
+  - `traefik.http.middlewares.n8n-mcp-ws-headers.headers.customrequestheaders.Connection=Upgrade`
+
+SSE and OAuth endpoints share the same host with paths:
+- SSE: `https://n8n-mcp.right-api.com/sse`
+- OAuth: `https://n8n-mcp.right-api.com/oauth`
 
 ## 🔐 Authentication Flow
 

@@ -90,3 +90,6 @@ temp/
 *token*
 *auth*
 .credentials
+
+# Local packages/binaries
+*.deb

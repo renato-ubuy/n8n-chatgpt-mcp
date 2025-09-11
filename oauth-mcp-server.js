@@ -17,6 +17,7 @@ const DATA_DIR = '/app/data';
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+const CRED_FILE = path.join(DATA_DIR, 'n8n-credentials.json');
 
 // Helper function to auto-detect server URL from request
 function getServerUrl(req) {
@@ -96,9 +97,9 @@ const accessTokens = new Map();
 const sessions = new Map();
 const authenticatedSessions = new Map(); // Track OAuth-authenticated sessions
 
-// Admin authentication - hardcoded for testing
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'your_secure_admin_password_hash';
+// Admin authentication (configurable via env, with defaults)
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'changeme';
 const adminSessions = new Map(); // Track authenticated admin sessions
 
 // Load existing sessions on startup
@@ -121,6 +122,13 @@ function createAdminSession(n8nHost, n8nApiKey) {
   };
   adminSessions.set(sessionToken, sessionData);
   saveSessionData(); // Persist immediately
+  try {
+    // Also persist a shared default for the SSE server to use
+    fs.writeFileSync(CRED_FILE, JSON.stringify({ host: n8nHost, api_key: n8nApiKey, savedAt: new Date().toISOString() }, null, 2));
+    console.log('Persisted default n8n credentials for SSE');
+  } catch (e) {
+    console.warn('Failed to persist shared credentials:', e?.message || String(e));
+  }
   return sessionToken;
 }
 
@@ -500,14 +508,26 @@ function verifySessionAuth(sessionId) {
   return null;
 }
 
+// CORS configuration
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const allowedOrigins = CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean);
+function pickCorsOrigin(requestOrigin) {
+  if (!allowedOrigins.length || allowedOrigins.includes('*')) return '*';
+  if (!requestOrigin) return allowedOrigins[0];
+  return allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
+}
+
 // OAuth and MCP server
 const httpServer = http.createServer(async (req, res) => {
   console.log(`${req.method} ${req.url}`);
   
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = pickCorsOrigin(req.headers.origin);
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Mcp-Session-Id, Last-Event-ID');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Expose-Headers', '*');
   
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
@@ -526,6 +546,13 @@ const httpServer = http.createServer(async (req, res) => {
   
   // Debug logging for path normalization
   console.log(`Path: ${originalPath} -> ${normalizedPath}`);
+
+  // Minimal OAuth configuration endpoints expected by some clients (e.g., ChatGPT Connectors)
+  if (req.method === 'GET' && (normalizedPath === '/oauth/config' || normalizedPath === '/oauth/providers')) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ providers: [] }));
+    return;
+  }
   
   // OAuth discovery endpoint
   if (req.method === 'GET' && normalizedPath === '/.well-known/oauth-authorization-server') {
@@ -1089,7 +1116,7 @@ const httpServer = http.createServer(async (req, res) => {
         console.log('Token exchange request body:', body);
         const params = new URLSearchParams(body);
         const code = params.get('code');
-        const clientId = params.get('client_id');
+        let clientId = params.get('client_id');
         const codeVerifier = params.get('code_verifier');
         
         console.log('Token exchange params:', { code, clientId, codeVerifier });
@@ -1112,7 +1139,12 @@ const httpServer = http.createServer(async (req, res) => {
           return;
         }
         
-        if (authCode.clientId !== clientId) {
+        // Allow public clients without client_id by deriving from the auth code (PKCE flow)
+        if (!clientId) {
+          clientId = authCode.clientId;
+        }
+        // Enforce client match when provided
+        if (clientId && authCode.clientId !== clientId) {
           console.log('ERROR: Client ID mismatch');
           res.writeHead(400);
           res.end('Client ID mismatch');

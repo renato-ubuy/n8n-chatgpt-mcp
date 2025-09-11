@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Right API - The Developer's MCP Gateway for Claude.ai</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Right API - The developer-first MCP Gateway. Connect any backend to Claude.ai with our revolutionary plugin architecture. Self-hosted, open-source, and production-ready.">
+    <meta name="keywords" content="MCP Gateway, Claude.ai, API Integration, Workflow Automation, N8N, Slack, GitHub, Developer Tools">
+    <meta name="author" content="Right API Team">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Right API - Developer's MCP Gateway">
+    <meta property="og:description" content="Connect any backend to Claude.ai with our revolutionary plugin architecture">
+    <meta property="og:image" content="https://right-api.com/assets/images/og-image.png">
+    <meta property="og:url" content="https://right-api.com">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Right API - Developer's MCP Gateway">
+    <meta name="twitter:description" content="Connect any backend to Claude.ai with our revolutionary plugin architecture">
+    <meta name="twitter:image" content="https://right-api.com/assets/images/twitter-card.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/assets/css/main.css">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Right API",
+      "description": "Developer-first MCP Gateway for Claude.ai integrations",
+      "url": "https://right-api.com",
+      "author": {
+        "@type": "Organization",
+        "name": "Right API Team"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Docker, Linux, macOS, Windows"
+    }
+    </script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <img src="/assets/images/logo.svg" alt="Right API" class="logo">
+                <span class="brand-text">Right API</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#plugins" class="nav-link">Plugins</a>
+                <a href="#docs" class="nav-link">Docs</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="https://github.com/right-api/universal-gateway" class="nav-link" target="_blank">GitHub</a>
+                <a href="#get-started" class="btn btn-primary">Get Started</a>
+            </div>
+            <div class="nav-toggle" id="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title">
+                        The <span class="highlight">Right Gateway</span><br>
+                        for Claude.ai Integrations
+                    </h1>
+                    <p class="hero-subtitle">
+                        Connect any backend to Claude.ai with our revolutionary plugin architecture. 
+                        Self-hosted, open-source, and production-ready.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#get-started" class="btn btn-primary btn-large">
+                            🚀 Get Started
+                        </a>
+                        <a href="https://docs.right-api.com" class="btn btn-secondary btn-large">
+                            📚 Documentation
+                        </a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">20+</span>
+                            <span class="stat-label">Built-in Plugins</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">100%</span>
+                            <span class="stat-label">Open Source</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">< 5min</span>
+                            <span class="stat-label">Setup Time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="hero-demo">
+                        <div class="terminal">
+                            <div class="terminal-header">
+                                <div class="terminal-buttons">
+                                    <span class="btn-close"></span>
+                                    <span class="btn-minimize"></span>
+                                    <span class="btn-maximize"></span>
+                                </div>
+                                <div class="terminal-title">right-api.com</div>
+                            </div>
+                            <div class="terminal-body">
+                                <div class="terminal-line">
+                                    <span class="prompt">$</span>
+                                    <span class="command">docker run -d right-api/gateway</span>
+                                </div>
+                                <div class="terminal-line">
+                                    <span class="output">✅ MCP Gateway started on https://right-api.com</span>
+                                </div>
+                                <div class="terminal-line">
+                                    <span class="output">🔌 20 plugins loaded</span>
+                                </div>
+                                <div class="terminal-line">
+                                    <span class="output">🎯 Ready for Claude.ai connections!</span>
+                                </div>
+                                <div class="terminal-cursor"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Why Choose Right API?</h2>
+                <p class="section-subtitle">
+                    While others focus on authentication or security, we revolutionize developer productivity
+                </p>
+            </div>
+            
+            <div class="comparison-table">
+                <div class="table-header">
+                    <div class="feature-col">Feature</div>
+                    <div class="competitor-col">MCPAuth</div>
+                    <div class="competitor-col">Syncado</div>
+                    <div class="rightapi-col">Right API</div>
+                </div>
+                <div class="table-row">
+                    <div class="feature-col">Focus</div>
+                    <div class="competitor-col">Authentication</div>
+                    <div class="competitor-col">Enterprise Security</div>
+                    <div class="rightapi-col">✨ Developer Productivity</div>
+                </div>
+                <div class="table-row">
+                    <div class="feature-col">Target</div>
+                    <div class="competitor-col">Enterprises</div>
+                    <div class="competitor-col">CISOs</div>
+                    <div class="rightapi-col">🔥 Developers & Integrators</div>
+                </div>
+                <div class="table-row">
+                    <div class="feature-col">Unique Value</div>
+                    <div class="competitor-col">OAuth 2.1</div>
+                    <div class="competitor-col">Audit Logs</div>
+                    <div class="rightapi-col">🚀 Plugin Ecosystem + Visual Workflows</div>
+                </div>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3 class="feature-title">Plugin Architecture</h3>
+                    <p class="feature-description">
+                        Install backend integrations like npm packages. 
+                        <code>right-api install @plugins/slack</code>
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3 class="feature-title">Visual Workflows</h3>
+                    <p class="feature-description">
+                        No-code backend orchestration. Connect Slack → N8N → GitHub with drag-and-drop.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🧪</div>
+                    <h3 class="feature-title">Developer Tools</h3>
+                    <p class="feature-description">
+                        Real-time testing, debugging, and performance monitoring. Test tools without Claude.ai.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🏪</div>
+                    <h3 class="feature-title">Community Marketplace</h3>
+                    <p class="feature-description">
+                        Verified plugins, community contributions, and plugin templates for quick start.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3 class="feature-title">Self-Hosted Privacy</h3>
+                    <p class="feature-description">
+                        Deploy on your infrastructure. Full control over data, security, and compliance.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Production Ready</h3>
+                    <p class="feature-description">
+                        Docker containers, health checks, monitoring, and auto-scaling out of the box.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Plugins Section -->
+    <section class="plugins" id="plugins">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Built-in Integrations</h2>
+                <p class="section-subtitle">Connect to popular services instantly</p>
+            </div>
+            
+            <div class="plugins-grid">
+                <div class="plugin-card featured">
+                    <div class="plugin-header">
+                        <img src="/assets/images/n8n-logo.svg" alt="N8N" class="plugin-logo">
+                        <div class="plugin-info">
+                            <h3 class="plugin-name">N8N Workflows</h3>
+                            <span class="plugin-badge">Official</span>
+                        </div>
+                    </div>
+                    <p class="plugin-description">Complete N8N integration with workflow management and execution.</p>
+                    <div class="plugin-stats">
+                        <span class="stat">⭐ 4.9</span>
+                        <span class="stat">📦 1.5k downloads</span>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <img src="/assets/images/slack-logo.svg" alt="Slack" class="plugin-logo">
+                        <div class="plugin-info">
+                            <h3 class="plugin-name">Slack</h3>
+                            <span class="plugin-badge">Official</span>
+                        </div>
+                    </div>
+                    <p class="plugin-description">Send messages, manage channels, and automate workspace tasks.</p>
+                    <div class="plugin-stats">
+                        <span class="stat">⭐ 4.8</span>
+                        <span class="stat">📦 2.1k downloads</span>
+                    </div>
+                </div>
+                
+                <div class="plugin-card">
+                    <div class="plugin-header">
+                        <img src="/assets/images/github-logo.svg" alt="GitHub" class="plugin-logo">
+                        <div class="plugin-info">
+                            <h3 class="plugin-name">GitHub</h3>
+                            <span class="plugin-badge">Official</span>
+                        </div>
+                    </div>
+                    <p class="plugin-description">Repository management, issue tracking, and CI/CD automation.</p>
+                    <div class="plugin-stats">
+                        <span class="stat">⭐ 4.7</span>
+                        <span class="stat">📦 1.8k downloads</span>
+                    </div>
+                </div>
+                
+                <div class="plugin-card coming-soon">
+                    <div class="plugin-header">
+                        <img src="/assets/images/notion-logo.svg" alt="Notion" class="plugin-logo">
+                        <div class="plugin-info">
+                            <h3 class="plugin-name">Notion</h3>
+                            <span class="plugin-badge">Coming Soon</span>
+                        </div>
+                    </div>
+                    <p class="plugin-description">Database operations, page management, and knowledge automation.</p>
+                    <div class="plugin-stats">
+                        <span class="stat">🚧 In Development</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="plugins-cta">
+                <a href="https://plugins.right-api.com" class="btn btn-primary">
+                    Browse All Plugins
+                </a>
+                <a href="https://docs.right-api.com/create-plugin" class="btn btn-secondary">
+                    Create Your Plugin
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section class="quickstart" id="get-started">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Get Started in Minutes</h2>
+                <p class="section-subtitle">Deploy Right API and start connecting backends to Claude.ai</p>
+            </div>
+            
+            <div class="quickstart-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Deploy with Docker</h3>
+                        <div class="code-block">
+                            <pre><code>git clone https://github.com/right-api/gateway
+cd gateway
+docker-compose up -d</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Configure Claude.ai</h3>
+                        <div class="code-block">
+                            <pre><code># Add MCP Server in Claude.ai:
+URL: https://your-domain.com/mcp
+Type: HTTP
+Headers: X-Gateway-Token: your-token</code></pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Start Automating!</h3>
+                        <div class="code-block">
+                            <pre><code># Ask Claude.ai:
+"Send a Slack message to #general saying 'Hello from Right API!'"</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section class="pricing" id="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Simple, Transparent Pricing</h2>
+                <p class="section-subtitle">Start free, scale as you grow</p>
+            </div>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Open Source</h3>
+                    <div class="pricing-price">
+                        <span class="price">$0</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✅ Self-hosted deployment</li>
+                        <li>✅ Core gateway functionality</li>
+                        <li>✅ Basic plugins (N8N, Slack, GitHub)</li>
+                        <li>✅ Community support</li>
+                        <li>✅ Unlimited workflows</li>
+                    </ul>
+                    <a href="https://github.com/right-api/gateway" class="btn btn-secondary">Get Started</a>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <h3 class="pricing-title">Pro</h3>
+                    <div class="pricing-price">
+                        <span class="price">$29</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>🚀 Managed hosting at right-api.com</li>
+                        <li>🚀 Premium plugins (Salesforce, HubSpot)</li>
+                        <li>🚀 Advanced workflow features</li>
+                        <li>🚀 Priority email support</li>
+                        <li>🚀 99.9% uptime SLA</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-primary">Start Free Trial</a>
+                </div>
+                
+                <div class="pricing-card">
+                    <h3 class="pricing-title">Enterprise</h3>
+                    <div class="pricing-price">
+                        <span class="price">$299</span>
+                        <span class="period">/month</span>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>🏢 On-premise deployment</li>
+                        <li>🏢 SSO integration</li>
+                        <li>🏢 Audit logs & compliance</li>
+                        <li>🏢 Custom plugin development</li>
+                        <li>🏢 Dedicated support manager</li>
+                    </ul>
+                    <a href="#contact" class="btn btn-secondary">Contact Sales</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <img src="/assets/images/logo.svg" alt="Right API" class="footer-logo">
+                        <span class="footer-brand-text">Right API</span>
+                    </div>
+                    <p class="footer-description">
+                        The developer-first MCP Gateway for Claude.ai integrations.
+                        Self-hosted, open-source, and production-ready.
+                    </p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Product</h4>
+                    <ul class="footer-links">
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#plugins">Plugins</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="https://docs.right-api.com">Documentation</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Community</h4>
+                    <ul class="footer-links">
+                        <li><a href="https://github.com/right-api/gateway">GitHub</a></li>
+                        <li><a href="https://discord.gg/rightapi">Discord</a></li>
+                        <li><a href="https://twitter.com/rightapi">Twitter</a></li>
+                        <li><a href="/blog">Blog</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4 class="footer-title">Company</h4>
+                    <ul class="footer-links">
+                        <li><a href="/about">About</a></li>
+                        <li><a href="/contact">Contact</a></li>
+                        <li><a href="/privacy">Privacy</a></li>
+                        <li><a href="/terms">Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p class="footer-copyright">
+                    © 2024 Right API. All rights reserved.
+                </p>
+                <div class="footer-social">
+                    <a href="https://github.com/right-api" aria-label="GitHub">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                    </a>
+                    <a href="https://twitter.com/rightapi" aria-label="Twitter">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                        </svg>
+                    </a>
+                    <a href="https://discord.gg/rightapi" aria-label="Discord">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419-.0001 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1568 2.4189Z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="/assets/js/main.js"></script>
+    
+    <!-- Analytics -->
+    <script>
+        // Google Analytics will be added here
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+</body>
+</html>

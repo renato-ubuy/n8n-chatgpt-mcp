@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mcp-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
+    container_name: mcp-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      
+      # Load from .env file
+      - HOME_ASSISTANT_URL=${HOME_ASSISTANT_URL}
+      - HOME_ASSISTANT_TOKEN=${HOME_ASSISTANT_TOKEN}
+      - N8N_URL=${N8N_URL}
+      - N8N_API_KEY=${N8N_API_KEY}
+      
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key}
+      - ADMIN_KEY=${ADMIN_KEY:-admin-secret-key}
+      
+      # CORS for Cloudflare
+      - CORS_ORIGIN=https://claude.ai,https://*.trycloudflare.com,http://localhost:3000
+      
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - mcp-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # TryCloudflare tunnel (no account needed!)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: mcp-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://mcp-gateway:3000
+    networks:
+      - mcp-network
+    depends_on:
+      - mcp-gateway
+
+  # Web Interface for managing the gateway - served through main gateway
+  # Admin interface accessible via /admin path on main gateway
+
+networks:
+  mcp-network:
+    driver: bridge

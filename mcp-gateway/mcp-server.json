@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "home-n8n-gateway": {
+      "command": "node",
+      "args": ["mcp-bridge.js"],
+      "env": {
+        "GATEWAY_URL": "https://born-peace-attraction-maintaining.trycloudflare.com"
+      }
+    }
+  }
+}

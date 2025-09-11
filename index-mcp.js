@@ -6,15 +6,21 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 // N8N Configuration
-const N8N_HOST = process.env.N8N_HOST || 'https://app.right-api.com';
-const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyODQwYzIzMC04NTE4LTRhZWEtYmM4OC0zNTk1MjhiMDQ5MDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQ3Mjg5NjIwfQ.dclIQI4D7-3udOfM_s2A2SHUbEGTM_7D3jneWtQj5NY';
+// Accept both N8N_HOST and N8N_API_URL for compatibility.
+const N8N_HOST = process.env.N8N_HOST || process.env.N8N_API_URL || 'https://app.right-api.com';
+const N8N_API_KEY = process.env.N8N_API_KEY; // must be provided via env
 
 // Simple N8N API client
 async function n8nRequest(endpoint, options = {}) {
+  if (!N8N_API_KEY) {
+    throw new Error('N8N_API_KEY is not set. Please export N8N_API_KEY in your environment.');
+  }
   const url = `${N8N_HOST}/api/v1${endpoint}`;
   const response = await fetch(url, {
     headers: {
+      // Support both common n8n auth styles
       'Authorization': `Bearer ${N8N_API_KEY}`,
+      'X-N8N-API-KEY': N8N_API_KEY,
       'Content-Type': 'application/json',
       ...options.headers
     },
@@ -176,6 +182,9 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("N8N MCP Server running on stdio");
+  if (!N8N_API_KEY) {
+    console.error("Warning: N8N_API_KEY is not set; tools that call the N8N API will fail until it is provided.");
+  }
 }
 
 main().catch(console.error);

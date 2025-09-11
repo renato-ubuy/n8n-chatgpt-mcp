@@ -1,0 +1,126 @@
+# 🔌 Connect Claude.ai to Your MCP Gateway
+
+Unfortunately, Claude.ai currently **only supports local MCP servers via stdio**, not HTTP endpoints directly. Here are your options:
+
+## ✅ Option 1: Local MCP Bridge (Recommended)
+
+**Save this as `mcp-bridge.js` on your local machine:**
+```javascript
+#!/usr/bin/env node
+
+const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+
+const GATEWAY_URL = 'https://afraid-back-marker-fishing.trycloudflare.com';
+
+class MCPBridge {
+  constructor() {
+    this.server = new Server(
+      { name: 'home-n8n-gateway', version: '1.0.0' },
+      { capabilities: { tools: {} } }
+    );
+    this.setupHandlers();
+  }
+
+  setupHandlers() {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const response = await fetch(`${GATEWAY_URL}/mcp/tools`);
+      const data = await response.json();
+      return data;
+    });
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      
+      const response = await fetch(`${GATEWAY_URL}/mcp/call`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, arguments: args })
+      });
+      
+      const result = await response.json();
+      return result;
+    });
+  }
+
+  async run() {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+  }
+}
+
+const bridge = new MCPBridge();
+bridge.run().catch(console.error);
+```
+
+**Install dependencies:**
+```bash
+npm install @modelcontextprotocol/sdk
+```
+
+**Add to Claude.ai MCP settings:**
+```json
+{
+  "mcpServers": {
+    "home-gateway": {
+      "command": "node",
+      "args": ["mcp-bridge.js"]
+    }
+  }
+}
+```
+
+## ✅ Option 2: Direct API Testing
+
+While Claude.ai can't connect directly, you can test all tools via API:
+
+**Get access token:**
+```bash
+curl -X POST https://afraid-back-marker-fishing.trycloudflare.com/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}'
+```
+
+**List Home Assistant devices:**
+```bash
+curl -X POST https://afraid-back-marker-fishing.trycloudflare.com/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_states","arguments":{}},"id":2}'
+```
+
+**Control device:**
+```bash
+curl -X POST https://afraid-back-marker-fishing.trycloudflare.com/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"call_service","arguments":{"domain":"light","service":"turn_on","entity_id":"light.bedroom"}},"id":3}'
+```
+
+**List N8N workflows:**
+```bash
+curl -X POST https://afraid-back-marker-fishing.trycloudflare.com/ \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"list_workflows","arguments":{}},"id":4}'
+```
+
+## 🎯 Available Tools
+
+**Home Assistant (3 tools):**
+- `get_states` - Get device states  
+- `call_service` - Control devices
+- `get_entities` - List devices by domain
+
+**N8N (3 tools):**
+- `list_workflows` - Show workflows
+- `execute_workflow` - Run workflow  
+- `get_executions` - Execution history
+
+## 🌐 Gateway Status
+
+Your MCP Gateway is running at:
+- **Public URL:** `https://afraid-back-marker-fishing.trycloudflare.com`
+- **Status:** ✅ Online and ready
+- **Protocol:** MCP JSON-RPC over HTTP
+- **Tools:** 6 total (3 Home Assistant + 3 N8N)
+
+The gateway is working perfectly - Claude.ai just needs the local bridge to connect to it!
