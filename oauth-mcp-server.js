@@ -18,6 +18,34 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 const CRED_FILE = path.join(DATA_DIR, 'n8n-credentials.json');
+const HOSTS_FILE = path.join(DATA_DIR, 'n8n-hosts.json');
+
+// Hosts storage (multi-host N8N management)
+let hostsData = { hosts: [], defaultHostId: null };
+function loadHosts() {
+  try {
+    if (fs.existsSync(HOSTS_FILE)) {
+      const raw = JSON.parse(fs.readFileSync(HOSTS_FILE, 'utf8'));
+      if (raw && Array.isArray(raw.hosts)) {
+        hostsData = { hosts: raw.hosts, defaultHostId: raw.defaultHostId || null };
+      }
+    } else {
+      fs.writeFileSync(HOSTS_FILE, JSON.stringify(hostsData, null, 2));
+    }
+  } catch (e) {
+    console.warn('Failed to load hosts file:', e?.message || String(e));
+  }
+}
+function saveHosts() {
+  try { fs.writeFileSync(HOSTS_FILE, JSON.stringify(hostsData, null, 2)); }
+  catch (e) { console.warn('Failed to persist hosts file:', e?.message || String(e)); }
+}
+function maskKey(k = '') {
+  if (!k) return '';
+  if (k.length <= 6) return '***';
+  return k.slice(0, 4) + '…' + k.slice(-2);
+}
+loadHosts();
 
 // Helper function to auto-detect server URL from request
 function getServerUrl(req) {
@@ -546,6 +574,124 @@ const httpServer = http.createServer(async (req, res) => {
   
   // Debug logging for path normalization
   console.log(`Path: ${originalPath} -> ${normalizedPath}`);
+
+  // Admin API: Multi-host N8N management (protected)
+  if (normalizedPath.startsWith('/admin/api/hosts')) {
+    // Require admin session cookie
+    const sessionCookie = req.headers.cookie?.split(';').find(c => c.trim().startsWith('admin_session='))?.split('=')[1];
+    if (!sessionCookie || !verifyAdminSession(sessionCookie)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
+    // Routes
+    // GET /admin/api/hosts
+    if (req.method === 'GET' && normalizedPath === '/admin/api/hosts') {
+      const out = hostsData.hosts.map(h => ({ id: h.id, name: h.name, url: h.url, apiKey: maskKey(h.apiKey), createdAt: h.createdAt, updatedAt: h.updatedAt }));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ hosts: out, defaultHostId: hostsData.defaultHostId }));
+      return;
+    }
+    // POST /admin/api/hosts
+    if (req.method === 'POST' && normalizedPath === '/admin/api/hosts') {
+      let body = '';
+      req.on('data', chunk => { body += chunk.toString(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const name = String(data.name || '').trim();
+          const urlStr = String(data.url || '').trim();
+          const apiKey = String(data.apiKey || '').trim();
+          if (!name || !urlStr || !apiKey) throw new Error('name, url, and apiKey are required');
+          const id = randomUUID();
+          const now = new Date().toISOString();
+          const hostRec = { id, name, url: urlStr, apiKey, createdAt: now, updatedAt: now };
+          hostsData.hosts.push(hostRec);
+          if (!hostsData.defaultHostId) hostsData.defaultHostId = id;
+          saveHosts();
+          res.writeHead(201, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ host: { ...hostRec, apiKey: maskKey(hostRec.apiKey) }, defaultHostId: hostsData.defaultHostId }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid_request', message: e?.message || String(e) }));
+        }
+      });
+      return;
+    }
+    // PATCH /admin/api/hosts/:id
+    if (req.method === 'PATCH' && normalizedPath.startsWith('/admin/api/hosts/')) {
+      const id = normalizedPath.split('/admin/api/hosts/')[1];
+      let body = '';
+      req.on('data', c => { body += c.toString(); });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const idx = hostsData.hosts.findIndex(h => h.id === id);
+          if (idx === -1) { res.writeHead(404).end('Not Found'); return; }
+          const h = hostsData.hosts[idx];
+          if (typeof data.name === 'string') h.name = data.name.trim();
+          if (typeof data.url === 'string') h.url = data.url.trim();
+          if (typeof data.apiKey === 'string') h.apiKey = data.apiKey.trim();
+          h.updatedAt = new Date().toISOString();
+          saveHosts();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ host: { ...h, apiKey: maskKey(h.apiKey) } }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid_request', message: e?.message || String(e) }));
+        }
+      });
+      return;
+    }
+    // DELETE /admin/api/hosts/:id
+    if (req.method === 'DELETE' && normalizedPath.startsWith('/admin/api/hosts/')) {
+      const id = normalizedPath.split('/admin/api/hosts/')[1];
+      const before = hostsData.hosts.length;
+      hostsData.hosts = hostsData.hosts.filter(h => h.id !== id);
+      if (hostsData.defaultHostId === id) hostsData.defaultHostId = hostsData.hosts[0]?.id || null;
+      const removed = before !== hostsData.hosts.length;
+      saveHosts();
+      res.writeHead(removed ? 200 : 404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: removed, defaultHostId: hostsData.defaultHostId }));
+      return;
+    }
+    // POST /admin/api/hosts/:id/test
+    if (req.method === 'POST' && normalizedPath.startsWith('/admin/api/hosts/') && normalizedPath.endsWith('/test')) {
+      const id = normalizedPath.split('/admin/api/hosts/')[1].replace(/\/test$/, '');
+      const host = hostsData.hosts.find(h => h.id === id);
+      if (!host) { res.writeHead(404).end('Not Found'); return; }
+      try {
+        const fetch = (await import('node-fetch')).default;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const resp = await fetch(`${host.url}/api/v1/workflows?limit=1`, { headers: { 'X-N8N-API-KEY': host.apiKey }, signal: controller.signal });
+        clearTimeout(timeoutId);
+        const ok = resp.ok;
+        const info = ok ? await resp.json().then(j => ({ ok: true, count: Array.isArray(j.data) ? j.data.length : undefined })) : { ok: false, status: resp.status };
+        res.writeHead(ok ? 200 : 502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(info));
+      } catch (e) {
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: e?.message || String(e) }));
+      }
+      return;
+    }
+    // POST /admin/api/hosts/:id/default
+    if (req.method === 'POST' && normalizedPath.startsWith('/admin/api/hosts/') && normalizedPath.endsWith('/default')) {
+      const id = normalizedPath.split('/admin/api/hosts/')[1].replace(/\/default$/, '');
+      const exists = hostsData.hosts.some(h => h.id === id);
+      if (!exists) { res.writeHead(404).end('Not Found'); return; }
+      hostsData.defaultHostId = id;
+      saveHosts();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, defaultHostId: id }));
+      return;
+    }
+    
+    res.writeHead(404);
+    res.end('Not Found');
+    return;
+  }
 
   // Minimal OAuth configuration endpoints expected by some clients (e.g., ChatGPT Connectors)
   if (req.method === 'GET' && (normalizedPath === '/oauth/config' || normalizedPath === '/oauth/providers')) {
