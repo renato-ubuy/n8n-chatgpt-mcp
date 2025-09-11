@@ -16,13 +16,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          generate_release_notes: true
-          body: |
-            Automated release for ${{ github.ref_name }}.
-            Highlights:
-            - ChatGPT-compatible SSE with tightened CORS
-            - Traefik CORS labels and compose defaults
-            - Docs updated with SSE curl test
+          generate_release_notes: false
+          body_path: RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
