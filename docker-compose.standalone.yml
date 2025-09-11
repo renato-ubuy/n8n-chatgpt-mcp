@@ -45,7 +45,9 @@ services:
       - "traefik.http.routers.n8n-mcp-sse.middlewares=n8n-mcp-sse-headers"
       - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolallowmethods=GET,POST,OPTIONS,PUT,DELETE"
       - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolallowheaders=*"
-      - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolalloworiginlist=${CORS_ORIGIN}"
+      - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolexposeheaders=*"
+      - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolallowcredentials=true"
       - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.accesscontrolmaxage=100"
       - "traefik.http.middlewares.n8n-mcp-sse-headers.headers.addvaryheader=true"
       # Also route root /message posts to the SSE service for compatibility
@@ -54,6 +56,7 @@ services:
       - "traefik.http.routers.n8n-mcp-sse-message.tls=true"
       - "traefik.http.routers.n8n-mcp-sse-message.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.routers.n8n-mcp-sse-message.service=n8n-mcp-sse"
+      - "traefik.http.routers.n8n-mcp-sse-message.middlewares=n8n-mcp-sse-headers"
     healthcheck:
       test: ["CMD", "node", "healthcheck.cjs"]
       interval: 30s
@@ -88,18 +91,24 @@ services:
       - "traefik.http.routers.n8n-mcp-ws.middlewares=n8n-mcp-ws-headers"
       - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.customrequestheaders.Upgrade=websocket"
       - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.customrequestheaders.Connection=Upgrade"
+      - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.accesscontrolalloworiginlist=${CORS_ORIGIN}"
+      - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.accesscontrolallowmethods=GET,OPTIONS"
+      - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.n8n-mcp-ws-headers.headers.addvaryheader=true"
       # Root path -> WS service JSON status
       - "traefik.http.routers.n8n-mcp-root.rule=Host(`n8n-mcp.right-api.com`) && Path(`/`)"
       - "traefik.http.routers.n8n-mcp-root.entrypoints=websecure"
       - "traefik.http.routers.n8n-mcp-root.tls=true"
       - "traefik.http.routers.n8n-mcp-root.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.routers.n8n-mcp-root.service=n8n-mcp-ws"
+      - "traefik.http.routers.n8n-mcp-root.middlewares=n8n-mcp-ws-headers"
       # Health path -> WS service health endpoint
       - "traefik.http.routers.n8n-mcp-health.rule=Host(`n8n-mcp.right-api.com`) && Path(`/health`)"
       - "traefik.http.routers.n8n-mcp-health.entrypoints=websecure"
       - "traefik.http.routers.n8n-mcp-health.tls=true"
       - "traefik.http.routers.n8n-mcp-health.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.routers.n8n-mcp-health.service=n8n-mcp-ws"
+      - "traefik.http.routers.n8n-mcp-health.middlewares=n8n-mcp-ws-headers"
       # HTTP -> HTTPS redirect for entire host
       - "traefik.http.routers.n8n-mcp-ws-http.rule=Host(`n8n-mcp.right-api.com`)"
       - "traefik.http.routers.n8n-mcp-ws-http.entrypoints=web"
@@ -134,12 +143,19 @@ services:
       - "traefik.http.routers.n8n-mcp-oauth.tls=true"
       - "traefik.http.routers.n8n-mcp-oauth.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.services.n8n-mcp-oauth.loadbalancer.server.port=3007"
+      - "traefik.http.routers.n8n-mcp-oauth.middlewares=n8n-mcp-oauth-headers"
+      - "traefik.http.middlewares.n8n-mcp-oauth-headers.headers.accesscontrolalloworiginlist=${CORS_ORIGIN}"
+      - "traefik.http.middlewares.n8n-mcp-oauth-headers.headers.accesscontrolallowmethods=GET,POST,DELETE,OPTIONS"
+      - "traefik.http.middlewares.n8n-mcp-oauth-headers.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.n8n-mcp-oauth-headers.headers.accesscontrolexposeheaders=*"
+      - "traefik.http.middlewares.n8n-mcp-oauth-headers.headers.accesscontrolallowcredentials=true"
       # Also serve OAuth discovery under /.well-known paths
       - "traefik.http.routers.n8n-mcp-oauth-wellknown.rule=Host(`n8n-mcp.right-api.com`) && PathPrefix(`/.well-known/`)"
       - "traefik.http.routers.n8n-mcp-oauth-wellknown.entrypoints=websecure"
       - "traefik.http.routers.n8n-mcp-oauth-wellknown.tls=true"
       - "traefik.http.routers.n8n-mcp-oauth-wellknown.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
       - "traefik.http.routers.n8n-mcp-oauth-wellknown.service=n8n-mcp-oauth"
+      - "traefik.http.routers.n8n-mcp-oauth-wellknown.middlewares=n8n-mcp-oauth-headers"
     healthcheck:
       test: ["CMD", "node", "healthcheck.cjs"]
       interval: 30s
