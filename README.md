@@ -15,7 +15,7 @@ Works over HTTP(S) using SSE or WebSocket and provides an OAuth flow for browser
 - [🚀 Production Deployment](#-production-deployment)
 - [🏗️ Architecture](#️-architecture)
  - [🏗️ Architecture](#️-architecture)
- - [🖥️ Admin Dashboard (Planned)](#️-admin-dashboard-planned)
+ - [🖥️ Admin Dashboard](#️-admin-dashboard)
 - [🔧 Troubleshooting](#-troubleshooting)
 - [🤝 Contributing](#-contributing)
 - [💬 Support](#-support)
@@ -41,7 +41,7 @@ Works over HTTP(S) using SSE or WebSocket and provides an OAuth flow for browser
 - 🐳 **Docker Ready** - Containerized deployment with Traefik integration
 - 🔌 **WebSocket Transport** - Native WS endpoint for ChatGPT Connectors
 - 🌊 **SSE Transport** - SSE endpoint compatible with ChatGPT Connectors
-- 🖥️ **Admin Dashboard (planned)** - Manage multiple N8N API hosts (add/remove, test, set defaults) similar to ha-mcp-bridge
+ - 🖥️ **Admin Dashboard** - Manage multiple N8N API hosts (add/remove, test, set defaults)
 
 ## 🧩 ChatGPT Connector (SSE)
 
@@ -66,6 +66,36 @@ Endpoints:
 Notes:
 - Set `CORS_ORIGIN` to a comma-separated allowlist. Use the exact origins ChatGPT uses (currently `https://chat.openai.com` and/or `https://chatgpt.com`).
 - The server persists `N8N_HOST`/`N8N_API_KEY` under `/app/data/n8n-credentials.json` when set via the `set_n8n_credentials` tool or SSE `?n8n_host=&n8n_key=` query.
+
+### 🔐 OAuth Mode (ChatGPT Connector)
+
+For a production ChatGPT Connector run the OAuth flavour (`MCP_MODE=oauth`). This exposes the same SSE endpoint at `/mcp`, but requires the user to sign in before a session is created.
+
+Environment highlights:
+
+```
+MCP_MODE=oauth
+PORT=3007                 # Default OAuth port
+SERVER_URL=https://mcp.example.com  # Optional public base URL for discovery
+ADMIN_USERNAME=admin       # Change these in production
+ADMIN_PASSWORD=changeme
+```
+
+Workflow:
+1. Start the server and visit `https://your-server/admin` to sign in. Add one or more n8n hosts (URL + API key) and choose a default.
+2. ChatGPT Connector hits `/.well-known/openid-configuration` and completes OAuth against `/oauth/authorize` and `/oauth/token`.
+3. After login the issued access token stores the selected `host_id` (or the admin-set default). The ChatGPT client connects to `GET /mcp` with `Accept: text/event-stream` and reuses the returned `host_id` for future calls.
+4. Additional hosts can be targeted per request with a query such as `/mcp?host_id=h2`.
+
+Endpoints exposed in OAuth mode:
+- GET `/.well-known/openid-configuration` – discovery document
+- GET `/oauth/authorize` – handles the login + consent flow
+- POST `/oauth/token` – issues access tokens (PKCE supported)
+- GET `/mcp` – SSE stream (requires `Authorization: Bearer <token>`)
+- POST `/mcp/message` – send JSON-RPC messages (requires `mcp-session-id`)
+- DELETE `/mcp/session` – close a session
+
+> ℹ️ Environment variables `N8N_HOST`/`N8N_API_KEY` still work as a fallback host when no admin-configured hosts exist.
 
 ### 🔎 Quick Curl Test (SSE)
 
@@ -145,7 +175,7 @@ Edit `.env` file with your settings:
 ```bash
 # Required
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=your-secure-password-hash
+ADMIN_PASSWORD=your-secure-password
 SERVER_URL=https://your-domain.com
 # Allow Claude and/or ChatGPT
 CORS_ORIGIN=https://claude.ai,https://chat.openai.com,https://chatgpt.com
@@ -177,7 +207,7 @@ sudo dpkg -i cloudflared.deb
 # Start the N8N MCP server locally
 docker run -d --name n8n-mcp-server -p 3005:3000 \
   -e ADMIN_USERNAME=admin \
-  -e ADMIN_PASSWORD=your-secure-password-hash \
+  -e ADMIN_PASSWORD=your-secure-password \
   -e CORS_ORIGIN="https://claude.ai,https://chat.openai.com,https://chatgpt.com" \
   your-built-image
 
@@ -298,6 +328,25 @@ Labels used in docker-compose.standalone.yml:
 SSE and OAuth endpoints share the same host with paths:
 - SSE: `https://n8n-mcp.right-api.com/sse`
 - OAuth: `https://n8n-mcp.right-api.com/oauth`
+
+## 🧱 Two-Container Setup (WS/SSE + OAuth/Admin)
+
+Run the WS/SSE server and the OAuth/Admin server as separate containers behind the same domain:
+
+- WS/SSE container: serves `/`, `/ws`, `/sse`, `/health` and runs the MCP tools.
+- OAuth/Admin container: serves `/oauth/*`, `/.well-known/*`, and `/admin` (dashboard).
+
+With this repo’s `docker-compose.standalone.yml`:
+- Start all: `docker compose up -d n8n-mcp-ws n8n-mcp-server n8n-mcp-oauth`
+- Or just the admin: `docker compose up -d n8n-mcp-oauth`
+- Both share `./data:/app/data` so saved hosts and defaults propagate to WS/SSE.
+
+Traefik routes are pre-set via labels:
+- `/ws`, `/health`, `/` → WS container
+- `/sse`, `/message` → SSE container
+- `/oauth/*`, `/.well-known/*`, `/admin` → OAuth/Admin container
+
+If you run containers manually, copy these label routes, put both containers on the Traefik network, and mount a shared data volume.
 
 ## 🔐 Authentication Flow
 
@@ -427,15 +476,34 @@ Tip: Export to PNG with Inkscape for high-DPI posting:
 ![System Architecture](screenshots/system-architecture.png)
 *Diagram: Complete system architecture and data flow*
 
-## 🖥️ Admin Dashboard (Planned)
+## 🖥️ Admin Dashboard
 
-A lightweight admin dashboard — similar to our `ha-mcp-bridge` — will let you manage multiple N8N API hosts centrally:
+Password-protected dashboard to centrally manage N8N API hosts and keys:
 - Add/remove/update N8N hosts (name, URL, API key)
-- Test connectivity and set a default host per session/server
-- Persistence under `/app/data/n8n-hosts.json`
-- Protected route (planned): `/admin` (using `ADMIN_USERNAME`/`ADMIN_PASSWORD`)
+- Test connectivity and set a default host for the server
+- Persists to `/app/data/n8n-hosts.json` and default creds to `/app/data/n8n-credentials.json`
+- Route: `https://n8n-mcp.right-api.com/admin` (uses `ADMIN_USERNAME`/`ADMIN_PASSWORD`)
 
-See docs/DASHBOARD.md for the sketch and API plan.
+How to enable (docker compose):
+- Ensure the OAuth service mounts `./data:/app/data` and Traefik routes `/admin` to it (already configured in `docker-compose.standalone.yml`).
+- Start the OAuth service: `docker compose up -d n8n-mcp-oauth`
+- Visit `/admin`, login, add your N8N host + API key, and click “Make Default”.
+
+Notes:
+- The SSE/WS servers read `/app/data/n8n-credentials.json`, so the default you set in the dashboard is used by tools immediately.
+- You can still override via SSE query params (`?n8n_host=&n8n_key=`) or the `set_n8n_credentials` tool.
+
+### Users & Tokens
+
+- Admin login uses environment variables:
+  - `ADMIN_USERNAME`, `ADMIN_PASSWORD` (plaintext password; set a strong value).
+- A single admin account is supported per OAuth container. Run multiple containers for separate admin creds if needed.
+- Programmatic access tokens for integrations:
+  - Create tokens in the dashboard under “API Tokens” or via HTTP:
+    - Create: `POST /tokens/register` with JSON `{ "description": "string", "scope": "mcp" }`
+    - List: `GET /tokens`
+    - Revoke: `DELETE /tokens/{raw_token}`
+  - All token endpoints require an authenticated admin session (the dashboard uses your session cookie).
 
 ```mermaid
 graph TD

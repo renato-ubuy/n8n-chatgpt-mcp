@@ -5,186 +5,55 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
-// N8N Configuration
-// Accept both N8N_HOST and N8N_API_URL for compatibility.
-const N8N_HOST = process.env.N8N_HOST || process.env.N8N_API_URL || 'https://app.right-api.com';
-const N8N_API_KEY = process.env.N8N_API_KEY; // must be provided via env
+import coreModule from './dist/services/mcp-server.js';
 
-// Simple N8N API client
-async function n8nRequest(endpoint, options = {}) {
-  if (!N8N_API_KEY) {
-    throw new Error('N8N_API_KEY is not set. Please export N8N_API_KEY in your environment.');
-  }
-  const url = `${N8N_HOST}/api/v1${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      // Support both common n8n auth styles
-      'Authorization': `Bearer ${N8N_API_KEY}`,
-      'X-N8N-API-KEY': N8N_API_KEY,
-      'Content-Type': 'application/json',
-      ...options.headers
-    },
-    ...options
-  });
-  
-  if (!response.ok) {
-    throw new Error(`N8N API error: ${response.status} ${response.statusText}`);
-  }
-  
-  return response.json();
-}
+const { McpServer } = coreModule;
+const core = new McpServer();
 
-// Create MCP server
 const server = new Server(
   {
-    name: "n8n-mcp-server",
-    version: "1.0.0"
+    name: 'n8n-mcp-server',
+    version: '1.0.0',
   },
   {
     capabilities: {
-      tools: {}
-    }
+      tools: {},
+    },
   }
 );
 
-// List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [
-      {
-        name: "get_workflows",
-        description: "Get all N8N workflows",
-        inputSchema: {
-          type: "object",
-          properties: {},
-          required: []
-        }
-      },
-      {
-        name: "get_workflow",
-        description: "Get a specific N8N workflow by ID",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Workflow ID" }
-          },
-          required: ["id"]
-        }
-      },
-      {
-        name: "activate_workflow",
-        description: "Activate an N8N workflow",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Workflow ID" }
-          },
-          required: ["id"]
-        }
-      },
-      {
-        name: "deactivate_workflow", 
-        description: "Deactivate an N8N workflow",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Workflow ID" }
-          },
-          required: ["id"]
-        }
-      },
-      {
-        name: "execute_workflow",
-        description: "Execute an N8N workflow",
-        inputSchema: {
-          type: "object",
-          properties: {
-            id: { type: "string", description: "Workflow ID" },
-            data: { type: "object", description: "Input data for workflow execution" }
-          },
-          required: ["id"]
-        }
-      }
-    ]
+    tools: core.getTools(),
   };
 });
 
-// Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
-  
-  try {
-    switch (name) {
-      case "get_workflows":
-        const workflows = await n8nRequest('/workflows');
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(workflows, null, 2)
-          }]
-        };
-        
-      case "get_workflow":
-        const workflow = await n8nRequest(`/workflows/${args.id}`);
-        return {
-          content: [{
-            type: "text", 
-            text: JSON.stringify(workflow, null, 2)
-          }]
-        };
-        
-      case "activate_workflow":
-        const activated = await n8nRequest(`/workflows/${args.id}/activate`, { method: 'POST' });
-        return {
-          content: [{
-            type: "text",
-            text: `Workflow ${args.id} activated successfully`
-          }]
-        };
-        
-      case "deactivate_workflow":
-        const deactivated = await n8nRequest(`/workflows/${args.id}/deactivate`, { method: 'POST' });
-        return {
-          content: [{
-            type: "text",
-            text: `Workflow ${args.id} deactivated successfully`
-          }]
-        };
-        
-      case "execute_workflow":
-        const execution = await n8nRequest(`/workflows/${args.id}/execute`, {
-          method: 'POST',
-          body: JSON.stringify(args.data || {})
-        });
-        return {
-          content: [{
-            type: "text",
-            text: JSON.stringify(execution, null, 2)
-          }]
-        };
-        
-      default:
-        throw new Error(`Unknown tool: ${name}`);
-    }
-  } catch (error) {
+  const name = request.params?.name;
+  const args = request.params?.arguments ?? {};
+
+  if (typeof name !== 'string' || !name.length) {
     return {
-      content: [{
-        type: "text",
-        text: `Error: ${error.message}`
-      }],
-      isError: true
+      content: [{ type: 'text', text: 'Error: Tool name is required' }],
+      isError: true,
+    };
+  }
+
+  try {
+    return await core.callTool(name, args);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: 'text', text: `Error: ${message}` }],
+      isError: true,
     };
   }
 });
 
-// Start server
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("N8N MCP Server running on stdio");
-  if (!N8N_API_KEY) {
-    console.error("Warning: N8N_API_KEY is not set; tools that call the N8N API will fail until it is provided.");
-  }
+  console.error('N8N MCP Server running on stdio');
 }
 
 main().catch(console.error);

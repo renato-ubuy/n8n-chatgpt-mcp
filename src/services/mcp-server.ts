@@ -10,10 +10,14 @@ export class McpServer extends EventEmitter {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private initialized: boolean = false;
 
-  constructor() {
+  constructor(n8nClient?: N8nClient) {
     super();
-    this.n8nClient = new N8nClient();
+    this.n8nClient = n8nClient ?? new N8nClient();
     this.startHeartbeat();
+  }
+
+  public setN8nClient(client: N8nClient): void {
+    this.n8nClient = client;
   }
 
   private startHeartbeat(): void {
@@ -96,24 +100,18 @@ export class McpServer extends EventEmitter {
   }
 
   public getTools(): McpTool[] {
-    return [
+    const legacyTools: McpTool[] = [
       {
         name: 'get_workflows',
         description: 'Get all N8N workflows',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-          required: [],
-        },
+        inputSchema: { type: 'object', properties: {}, required: [] },
       },
       {
         name: 'get_workflow',
         description: 'Get a specific N8N workflow by ID',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Workflow ID' },
-          },
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
           required: ['id'],
         },
       },
@@ -151,9 +149,7 @@ export class McpServer extends EventEmitter {
         description: 'Delete an N8N workflow',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Workflow ID' },
-          },
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
           required: ['id'],
         },
       },
@@ -162,9 +158,7 @@ export class McpServer extends EventEmitter {
         description: 'Activate an N8N workflow',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Workflow ID' },
-          },
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
           required: ['id'],
         },
       },
@@ -173,9 +167,7 @@ export class McpServer extends EventEmitter {
         description: 'Deactivate an N8N workflow',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Workflow ID' },
-          },
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
           required: ['id'],
         },
       },
@@ -198,7 +190,7 @@ export class McpServer extends EventEmitter {
           type: 'object',
           properties: {
             workflowId: { type: 'string', description: 'Filter by workflow ID' },
-            limit: { type: 'number', description: 'Maximum number of executions to return', default: 20 },
+            limit: { type: 'number', description: 'Maximum executions to return', default: 20 },
           },
           required: [],
         },
@@ -208,9 +200,7 @@ export class McpServer extends EventEmitter {
         description: 'Get a specific workflow execution',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Execution ID' },
-          },
+          properties: { id: { type: 'string', description: 'Execution ID' } },
           required: ['id'],
         },
       },
@@ -219,13 +209,197 @@ export class McpServer extends EventEmitter {
         description: 'Stop a running workflow execution',
         inputSchema: {
           type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Execution ID' },
-          },
+          properties: { id: { type: 'string', description: 'Execution ID' } },
           required: ['id'],
         },
       },
     ];
+
+    const enhancedTools: McpTool[] = [
+      {
+        name: 'n8n_list_workflows',
+        description: 'List workflows with optional filters (active, tags, pagination)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            active: { type: 'boolean', description: 'Filter by active status' },
+            limit: { type: 'number', description: 'Maximum workflows to return' },
+            offset: { type: 'number', description: 'Skip a number of workflows' },
+            search: { type: 'string', description: 'Search by name' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags (any match)' },
+          },
+        },
+      },
+      {
+        name: 'n8n_get_workflow',
+        description: 'Get a workflow by ID with full definition',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_get_workflow_details',
+        description: 'Get workflow metadata including execution stats and usage',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_get_workflow_structure',
+        description: 'Return only nodes and connections for a workflow',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_get_workflow_minimal',
+        description: 'Return minimal workflow information (id, name, active, tags)',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_create_workflow',
+        description: 'Create a workflow (alias of create_workflow)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Workflow name' },
+            nodes: { type: 'array', description: 'Workflow nodes' },
+            connections: { type: 'object', description: 'Workflow connections' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
+          },
+          required: ['name', 'nodes', 'connections'],
+        },
+      },
+      {
+        name: 'n8n_update_full_workflow',
+        description: 'Update workflow by replacing nodes, connections, and settings',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Workflow ID' },
+            name: { type: 'string', description: 'Workflow name' },
+            nodes: { type: 'array', description: 'Complete workflow nodes' },
+            connections: { type: 'object', description: 'Complete workflow connections' },
+            settings: { type: 'object', description: 'Workflow settings' },
+            tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_update_partial_workflow',
+        description: 'Apply targeted operations to a workflow (add/update nodes, connections, settings)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Workflow ID' },
+            operations: { type: 'array', description: 'Array of operations to apply', items: { type: 'object' } },
+            validateOnly: { type: 'boolean', description: 'Validate without saving changes' },
+          },
+          required: ['id', 'operations'],
+        },
+      },
+      {
+        name: 'n8n_delete_workflow',
+        description: 'Delete a workflow (alias of delete_workflow)',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Workflow ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_execute_workflow',
+        description: 'Execute a workflow by ID (alias of execute_workflow)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Workflow ID' },
+            workflowId: { type: 'string', description: 'Workflow ID (alternate field)' },
+            data: { type: 'object', description: 'Payload for the execution' },
+          },
+          required: [],
+        },
+      },
+      {
+        name: 'n8n_list_executions',
+        description: 'List executions with optional filters',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            workflowId: { type: 'string', description: 'Filter by workflow ID' },
+            limit: { type: 'number', description: 'Maximum executions to return' },
+            status: { type: 'string', description: 'Filter by execution status' },
+            lastId: { type: 'string', description: 'Pagination cursor (execution ID)' },
+          },
+        },
+      },
+      {
+        name: 'n8n_get_execution',
+        description: 'Get execution details by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Execution ID' },
+            includeData: { type: 'boolean', description: 'Include execution data payload' },
+          },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_delete_execution',
+        description: 'Delete an execution permanently',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Execution ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_stop_execution',
+        description: 'Stop a running execution',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'string', description: 'Execution ID' } },
+          required: ['id'],
+        },
+      },
+      {
+        name: 'n8n_health_check',
+        description: 'Check n8n instance health and API connectivity',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+      {
+        name: 'n8n_trigger_webhook_workflow',
+        description: 'Trigger a workflow via webhook URL',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            webhookUrl: { type: 'string', description: 'Full webhook URL' },
+            httpMethod: { type: 'string', description: 'HTTP method to use (default POST)' },
+            data: { type: 'object', description: 'Payload for webhook requests' },
+            headers: { type: 'object', description: 'Additional request headers' },
+            waitForResponse: { type: 'boolean', description: 'Wait for webhook response (default true)' },
+          },
+          required: ['webhookUrl'],
+        },
+      },
+    ];
+
+    return [...legacyTools, ...enhancedTools];
   }
 
   public async handleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
@@ -289,18 +463,45 @@ export class McpServer extends EventEmitter {
   }
 
   private async handleToolsCall(request: JsonRpcRequest): Promise<any> {
-    const { name, arguments: args } = request.params;
+    const params = request.params ?? {};
+    const name = params.name;
+    if (typeof name !== 'string' || !name.length) {
+      throw new Error('Tool name is required');
+    }
+    const args = params.arguments || {};
 
+    return this.executeTool(name, args);
+  }
+
+  private async executeTool(name: string, args: any): Promise<McpToolResult> {
     switch (name) {
       case 'get_workflows':
         return await this.getWorkflows();
+      case 'n8n_list_workflows':
+        return await this.getWorkflows(args);
       case 'get_workflow':
         return await this.getWorkflow(args.id);
+      case 'n8n_get_workflow':
+        return await this.getWorkflow(args.id);
+      case 'n8n_get_workflow_details':
+        return await this.getWorkflowDetails(args.id);
+      case 'n8n_get_workflow_structure':
+        return await this.getWorkflowStructure(args.id);
+      case 'n8n_get_workflow_minimal':
+        return await this.getWorkflowMinimal(args.id);
       case 'create_workflow':
+        return await this.createWorkflow(args);
+      case 'n8n_create_workflow':
         return await this.createWorkflow(args);
       case 'update_workflow':
         return await this.updateWorkflow(args);
+      case 'n8n_update_full_workflow':
+        return await this.updateWorkflow(args);
+      case 'n8n_update_partial_workflow':
+        return await this.updateWorkflowPartial(args);
       case 'delete_workflow':
+        return await this.deleteWorkflow(args.id);
+      case 'n8n_delete_workflow':
         return await this.deleteWorkflow(args.id);
       case 'activate_workflow':
         return await this.activateWorkflow(args.id);
@@ -308,19 +509,46 @@ export class McpServer extends EventEmitter {
         return await this.deactivateWorkflow(args.id);
       case 'execute_workflow':
         return await this.executeWorkflow(args.id, args.data);
+      case 'n8n_execute_workflow':
+        return await this.executeWorkflow(args.id || args.workflowId, args.data);
       case 'get_executions':
-        return await this.getExecutions(args.workflowId, args.limit);
+        return await this.getExecutions(args);
+      case 'n8n_list_executions':
+        return await this.getExecutions(args);
       case 'get_execution':
         return await this.getExecution(args.id);
+      case 'n8n_get_execution':
+        return await this.getExecution(args.id, args.includeData);
       case 'stop_execution':
         return await this.stopExecution(args.id);
+      case 'n8n_stop_execution':
+        return await this.stopExecution(args.id);
+      case 'n8n_delete_execution':
+        return await this.deleteExecution(args.id);
+      case 'n8n_health_check':
+        return await this.healthCheck();
+      case 'n8n_trigger_webhook_workflow':
+        return await this.triggerWebhook(args);
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
   }
 
-  private async getWorkflows(): Promise<McpToolResult> {
-    const workflows = await this.n8nClient.getWorkflows();
+  public async callTool(name: string, args?: any): Promise<McpToolResult> {
+    return this.executeTool(name, args ?? {});
+  }
+
+  private async getWorkflows(filters?: any): Promise<McpToolResult> {
+    const params: any = {};
+    if (filters) {
+      if (typeof filters.active === 'boolean') params.active = filters.active;
+      if (typeof filters.limit === 'number') params.limit = filters.limit;
+      if (typeof filters.offset === 'number') params.offset = filters.offset;
+      if (typeof filters.search === 'string') params.search = filters.search;
+      if (Array.isArray(filters.tags)) params.tags = filters.tags;
+    }
+
+    const workflows = await this.n8nClient.getWorkflows(Object.keys(params).length ? params : undefined);
     return {
       content: [{
         type: 'text',
@@ -336,6 +564,41 @@ export class McpServer extends EventEmitter {
         type: 'text',
         text: JSON.stringify(workflow, null, 2),
       }],
+    };
+  }
+
+  private async getWorkflowDetails(id: string): Promise<McpToolResult> {
+    const workflow = await this.n8nClient.getWorkflowDetails(id);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }],
+    };
+  }
+
+  private async getWorkflowStructure(id: string): Promise<McpToolResult> {
+    const workflow = await this.n8nClient.getWorkflow(id);
+    const structure = {
+      id: workflow.id,
+      name: workflow.name,
+      nodes: workflow.nodes,
+      connections: workflow.connections,
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(structure, null, 2) }],
+    };
+  }
+
+  private async getWorkflowMinimal(id: string): Promise<McpToolResult> {
+    const workflow = await this.n8nClient.getWorkflow(id);
+    const minimal = {
+      id: workflow.id,
+      name: workflow.name,
+      active: workflow.active,
+      tags: workflow.tags || [],
+      createdAt: workflow.createdAt,
+      updatedAt: workflow.updatedAt,
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(minimal, null, 2) }],
     };
   }
 
@@ -358,6 +621,143 @@ export class McpServer extends EventEmitter {
       content: [{
         type: 'text',
         text: JSON.stringify(workflow, null, 2),
+      }],
+    };
+  }
+
+  private async updateWorkflowPartial(args: any): Promise<McpToolResult> {
+    const { id, operations, validateOnly } = args;
+    if (!Array.isArray(operations) || operations.length === 0) {
+      throw new Error('operations array is required for partial updates');
+    }
+
+    const workflow = await this.n8nClient.getWorkflow(id);
+    const updatedWorkflow = JSON.parse(JSON.stringify(workflow));
+    const appliedOperations: string[] = [];
+
+    for (const operation of operations) {
+      if (!operation || typeof operation.type !== 'string') {
+        throw new Error('Each operation must include a type');
+      }
+
+      const type = operation.type;
+
+      switch (type) {
+        case 'updateName':
+          if (typeof operation.name !== 'string') {
+            throw new Error('updateName operation requires a name');
+          }
+          updatedWorkflow.name = operation.name;
+          appliedOperations.push(`updateName:${operation.name}`);
+          break;
+        case 'updateSettings':
+          if (typeof operation.settings !== 'object' || operation.settings === null) {
+            throw new Error('updateSettings operation requires a settings object');
+          }
+          updatedWorkflow.settings = {
+            ...(updatedWorkflow.settings || {}),
+            ...operation.settings,
+          };
+          appliedOperations.push('updateSettings');
+          break;
+        case 'addTag':
+          if (typeof operation.tag !== 'string') {
+            throw new Error('addTag operation requires a tag');
+          }
+          updatedWorkflow.tags = Array.from(new Set([...(updatedWorkflow.tags || []), operation.tag]));
+          appliedOperations.push(`addTag:${operation.tag}`);
+          break;
+        case 'removeTag':
+          if (typeof operation.tag !== 'string') {
+            throw new Error('removeTag operation requires a tag');
+          }
+          updatedWorkflow.tags = (updatedWorkflow.tags || []).filter((tag: string) => tag !== operation.tag);
+          appliedOperations.push(`removeTag:${operation.tag}`);
+          break;
+        case 'addNode':
+          if (!operation.node || typeof operation.node !== 'object') {
+            throw new Error('addNode operation requires a node object');
+          }
+          updatedWorkflow.nodes.push(operation.node);
+          appliedOperations.push(`addNode:${operation.node.name || operation.node.id}`);
+          break;
+        case 'removeNode':
+          if (!operation.nodeId && !operation.nodeName) {
+            throw new Error('removeNode requires nodeId or nodeName');
+          }
+          this.removeNode(updatedWorkflow, operation.nodeId, operation.nodeName);
+          appliedOperations.push(`removeNode:${operation.nodeId || operation.nodeName}`);
+          break;
+        case 'moveNode':
+          if (!Array.isArray(operation.position) || operation.position.length !== 2) {
+            throw new Error('moveNode requires a position array [x, y]');
+          }
+          this.updateNode(updatedWorkflow, operation, (node) => {
+            node.position = operation.position;
+          });
+          appliedOperations.push(`moveNode:${operation.nodeId || operation.nodeName}`);
+          break;
+        case 'enableNode':
+        case 'disableNode':
+          this.updateNode(updatedWorkflow, operation, (node) => {
+            node.disabled = type === 'disableNode';
+          });
+          appliedOperations.push(`${type}:${operation.nodeId || operation.nodeName}`);
+          break;
+        case 'updateNode':
+          if (!operation.updates || typeof operation.updates !== 'object') {
+            throw new Error('updateNode requires an updates object');
+          }
+          this.updateNode(updatedWorkflow, operation, (node) => {
+            for (const [key, value] of Object.entries(operation.updates)) {
+              this.setDeepValue(node, key, value);
+            }
+          });
+          appliedOperations.push(`updateNode:${operation.nodeId || operation.nodeName}`);
+          break;
+        case 'addConnection':
+          this.addConnection(updatedWorkflow, operation);
+          appliedOperations.push(`addConnection:${operation.source}->${operation.target}`);
+          break;
+        case 'removeConnection':
+          this.removeConnection(updatedWorkflow, operation);
+          appliedOperations.push(`removeConnection:${operation.source}->${operation.target}`);
+          break;
+        default:
+          throw new Error(`Unsupported operation type: ${type}`);
+      }
+    }
+
+    if (validateOnly) {
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            id,
+            message: 'operations validated successfully (no changes persisted)',
+            operations: appliedOperations,
+          }, null, 2),
+        }],
+      };
+    }
+
+    const saved = await this.n8nClient.updateWorkflow(id, {
+      name: updatedWorkflow.name,
+      nodes: updatedWorkflow.nodes,
+      connections: updatedWorkflow.connections,
+      settings: updatedWorkflow.settings,
+      tags: updatedWorkflow.tags,
+    });
+
+    this.broadcastToClients({ type: 'workflow_updated', workflow: saved });
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          workflow: saved,
+          operations: appliedOperations,
+        }, null, 2),
       }],
     };
   }
@@ -396,6 +796,9 @@ export class McpServer extends EventEmitter {
   }
 
   private async executeWorkflow(id: string, data?: any): Promise<McpToolResult> {
+    if (!id) {
+      throw new Error('Workflow id is required');
+    }
     const execution = await this.n8nClient.executeWorkflow(id, data);
     this.broadcastToClients({ type: 'workflow_executed', execution });
     return {
@@ -406,8 +809,14 @@ export class McpServer extends EventEmitter {
     };
   }
 
-  private async getExecutions(workflowId?: string, limit?: number): Promise<McpToolResult> {
-    const executions = await this.n8nClient.getExecutions(workflowId, limit);
+  private async getExecutions(filters?: any): Promise<McpToolResult> {
+    let params: any = undefined;
+    if (filters && typeof filters === 'object' && !Array.isArray(filters)) {
+      params = { ...filters };
+    } else if (typeof filters === 'string') {
+      params = { workflowId: filters };
+    }
+    const executions = await this.n8nClient.getExecutions(params);
     return {
       content: [{
         type: 'text',
@@ -416,8 +825,8 @@ export class McpServer extends EventEmitter {
     };
   }
 
-  private async getExecution(id: string): Promise<McpToolResult> {
-    const execution = await this.n8nClient.getExecution(id);
+  private async getExecution(id: string, includeData?: boolean): Promise<McpToolResult> {
+    const execution = await this.n8nClient.getExecution(id, includeData === true);
     return {
       content: [{
         type: 'text',
@@ -435,6 +844,158 @@ export class McpServer extends EventEmitter {
         text: JSON.stringify(execution, null, 2),
       }],
     };
+  }
+
+  private async deleteExecution(id: string): Promise<McpToolResult> {
+    await this.n8nClient.deleteExecution(id);
+    this.broadcastToClients({ type: 'execution_deleted', executionId: id });
+    return {
+      content: [{
+        type: 'text',
+        text: `Execution ${id} deleted successfully`,
+      }],
+    };
+  }
+
+  private async healthCheck(): Promise<McpToolResult> {
+    const status = await this.n8nClient.healthCheck();
+    return {
+      content: [{ type: 'text', text: JSON.stringify(status, null, 2) }],
+    };
+  }
+
+  private async triggerWebhook(args: any): Promise<McpToolResult> {
+    if (!args?.webhookUrl) {
+      throw new Error('webhookUrl is required');
+    }
+    const result = await this.n8nClient.triggerWebhook(args);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+    };
+  }
+
+  private updateNode(workflow: any, operation: any, mutate: (node: any) => void): void {
+    const target = this.findNode(workflow, operation.nodeId, operation.nodeName);
+    if (!target) {
+      throw new Error(`Node not found: ${operation.nodeId || operation.nodeName}`);
+    }
+    mutate(target);
+  }
+
+  private findNode(workflow: any, nodeId?: string, nodeName?: string): any | undefined {
+    return workflow.nodes.find((node: any) => {
+      if (nodeId && node.id === nodeId) return true;
+      if (nodeName && node.name === nodeName) return true;
+      return false;
+    });
+  }
+
+  private removeNode(workflow: any, nodeId?: string, nodeName?: string): void {
+    const target = this.findNode(workflow, nodeId, nodeName);
+    if (!target) {
+      throw new Error(`Node not found: ${nodeId || nodeName}`);
+    }
+
+    workflow.nodes = workflow.nodes.filter((node: any) => node !== target);
+
+    const name = target.name;
+    const connections = workflow.connections || {};
+
+    // Remove outgoing connections
+    if (connections[name]) {
+      delete connections[name];
+    }
+
+    // Remove incoming connections
+    for (const source of Object.keys(connections)) {
+      const outputs = connections[source];
+      for (const outputName of Object.keys(outputs)) {
+        outputs[outputName] = outputs[outputName]
+          .map((branch: any[]) => branch.filter((entry) => entry.node !== name))
+          .filter((branch: any[]) => branch.length > 0);
+
+        if (outputs[outputName].length === 0) {
+          delete outputs[outputName];
+        }
+      }
+
+      if (Object.keys(outputs).length === 0) {
+        delete connections[source];
+      }
+    }
+  }
+
+  private addConnection(workflow: any, operation: any): void {
+    const { source, target } = operation;
+    if (!source || !target) {
+      throw new Error('addConnection requires source and target');
+    }
+
+    const sourceOutput = operation.sourceOutput || 'main';
+    const targetInput = operation.targetInput || 'main';
+    const outputIndex = typeof operation.outputIndex === 'number' ? operation.outputIndex : 0;
+
+    workflow.connections = workflow.connections || {};
+    workflow.connections[source] = workflow.connections[source] || {};
+    const output = workflow.connections[source][sourceOutput] || [];
+
+    while (output.length <= outputIndex) {
+      output.push([]);
+    }
+
+    const branch = output[outputIndex];
+    const exists = branch.some((connection: any) => connection.node === target && connection.type === targetInput);
+    if (!exists) {
+      branch.push({ node: target, type: targetInput, index: operation.targetIndex || 0 });
+    }
+
+    workflow.connections[source][sourceOutput] = output;
+  }
+
+  private removeConnection(workflow: any, operation: any): void {
+    const { source, target } = operation;
+    if (!source || !target) {
+      throw new Error('removeConnection requires source and target');
+    }
+
+    const sourceOutput = operation.sourceOutput || 'main';
+    const targetInput = operation.targetInput || 'main';
+
+    const connections = workflow.connections || {};
+    const outputs = connections[source];
+    if (!outputs || !outputs[sourceOutput]) {
+      return;
+    }
+
+    outputs[sourceOutput] = outputs[sourceOutput]
+      .map((branch: any[]) => branch.filter((connection) => {
+        return !(connection.node === target && (connection.type || 'main') === targetInput);
+      }))
+      .filter((branch: any[]) => branch.length > 0);
+
+    if (outputs[sourceOutput].length === 0) {
+      delete outputs[sourceOutput];
+    }
+
+    if (Object.keys(outputs).length === 0) {
+      delete connections[source];
+    }
+  }
+
+  private setDeepValue(target: any, path: string, value: any): void {
+    const segments = path.split('.');
+    let current = target;
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      if (i === segments.length - 1) {
+        current[segment] = value;
+      } else {
+        if (typeof current[segment] !== 'object' || current[segment] === null) {
+          current[segment] = {};
+        }
+        current = current[segment];
+      }
+    }
   }
 
   private createErrorResponse(id: string | number | null, code: number, message: string): JsonRpcResponse {

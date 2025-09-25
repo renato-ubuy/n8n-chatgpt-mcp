@@ -7,6 +7,11 @@ import {
   ListToolsRequestSchema,
   JSONRPCMessageSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import coreModule from './dist/services/mcp-server.js';
+import clientModule from './dist/services/n8n-client.js';
+
+const { McpServer } = coreModule;
+const { N8nClient } = clientModule;
 
 // Basic WebSocket transport implementing MCP Transport interface
 class WebSocketServerTransport {
@@ -60,6 +65,18 @@ const N8N_API_KEY = process.env.N8N_API_KEY || '';
 let CURRENT_N8N_HOST = N8N_HOST;
 let CURRENT_N8N_API_KEY = N8N_API_KEY;
 
+const core = new McpServer(new N8nClient({
+  baseUrl: CURRENT_N8N_HOST,
+  apiKey: CURRENT_N8N_API_KEY,
+}));
+
+function refreshCoreClient() {
+  core.setN8nClient(new N8nClient({
+    baseUrl: CURRENT_N8N_HOST,
+    apiKey: CURRENT_N8N_API_KEY,
+  }));
+}
+
 async function n8nRequest(endpoint, options = {}) {
   if (!CURRENT_N8N_API_KEY) {
     throw new Error('N8N_API_KEY is not set. Please export N8N_API_KEY in your environment.');
@@ -89,38 +106,37 @@ function createMCPServer() {
 
   // Register tools (parity with HTTP/SSE server)
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    const coreTools = core.getTools();
+    const customTools = [
+      { name: 'list_workflows', description: 'List all N8N workflows (alias)', inputSchema: { type: 'object', properties: {}, required: [] } },
+      { name: 'retry_execution', description: 'Retry a specific execution', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+      { name: 'delete_execution', description: 'Delete a specific execution', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+      { name: 'list_credentials', description: 'List all credentials', inputSchema: { type: 'object', properties: {}, required: [] } },
+      { name: 'get_credential', description: 'Get credential by ID', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+      { name: 'create_credential', description: 'Create credential', inputSchema: { type: 'object', properties: { data: { type: 'object' } }, required: ['data'] } },
+      { name: 'update_credential', description: 'Update credential', inputSchema: { type: 'object', properties: { id: { type: 'string' }, data: { type: 'object' } }, required: ['id', 'data'] } },
+      { name: 'delete_credential', description: 'Delete credential', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
+      { name: 'search', description: 'Search the web (DuckDuckGo)', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, max_results: { type: 'number', default: 5 } }, required: ['query'] } },
+      { name: 'retrieve', description: 'Retrieve and summarize a web page', inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' } }, required: ['url'] } },
+      { name: 'fetch', description: 'Fetch a result by id (or URL)', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Result id or URL' }, url: { type: 'string', description: 'URL to fetch (fallback)' } }, required: ['id'] } },
+      { name: 'set_n8n_credentials', description: 'Set default n8n host and API key for this server session', inputSchema: { type: 'object', properties: { host: { type: 'string', description: 'n8n base URL' }, api_key: { type: 'string', description: 'n8n API key' }, test: { type: 'boolean', default: true } }, required: ['host', 'api_key'] } },
+      { name: 'get_n8n_status', description: 'Get current n8n host/api key state', inputSchema: { type: 'object', properties: {}, required: [] } },
+    ];
+
     return {
-      tools: [
-        { name: 'get_workflows', description: 'Get all N8N workflows', inputSchema: { type: 'object', properties: {}, required: [] } },
-        { name: 'list_workflows', description: 'List all N8N workflows (alias)', inputSchema: { type: 'object', properties: {}, required: [] } },
-        { name: 'get_workflow', description: 'Get a specific N8N workflow by ID', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Workflow ID' } }, required: ['id'] } },
-        { name: 'create_workflow', description: 'Create a new N8N workflow', inputSchema: { type: 'object', properties: { name: { type: 'string' }, nodes: { type: 'array', items: { type: 'object' } }, connections: { type: 'object', additionalProperties: true } }, required: ['name', 'nodes', 'connections'] } },
-        { name: 'update_workflow', description: 'Update an existing N8N workflow', inputSchema: { type: 'object', properties: { id: { type: 'string' }, name: { type: 'string' }, nodes: { type: 'array', items: { type: 'object' } }, connections: { type: 'object', additionalProperties: true }, active: { type: 'boolean' } }, required: ['id'] } },
-        { name: 'delete_workflow', description: 'Delete an N8N workflow', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'activate_workflow', description: 'Activate an N8N workflow', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'deactivate_workflow', description: 'Deactivate an N8N workflow', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'execute_workflow', description: 'Execute an N8N workflow', inputSchema: { type: 'object', properties: { id: { type: 'string' }, data: { type: 'object' } }, required: ['id'] } },
-        { name: 'get_executions', description: 'Get workflow execution history', inputSchema: { type: 'object', properties: { workflowId: { type: 'string' }, limit: { type: 'number', default: 20 } }, required: [] } },
-        { name: 'get_execution', description: 'Get a specific execution by ID', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'retry_execution', description: 'Retry a specific execution', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'delete_execution', description: 'Delete a specific execution', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'list_credentials', description: 'List all credentials', inputSchema: { type: 'object', properties: {}, required: [] } },
-        { name: 'get_credential', description: 'Get credential by ID', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'create_credential', description: 'Create credential', inputSchema: { type: 'object', properties: { data: { type: 'object' } }, required: ['data'] } },
-        { name: 'update_credential', description: 'Update credential', inputSchema: { type: 'object', properties: { id: { type: 'string' }, data: { type: 'object' } }, required: ['id','data'] } },
-        { name: 'delete_credential', description: 'Delete credential', inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } },
-        { name: 'search', description: 'Search the web (DuckDuckGo)', inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'Search query' }, max_results: { type: 'number', default: 5 } }, required: ['query'] } },
-        { name: 'retrieve', description: 'Retrieve and summarize a web page', inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'URL to fetch' } }, required: ['url'] } },
-        { name: 'fetch', description: 'Fetch a result by id (or URL)', inputSchema: { type: 'object', properties: { id: { type: 'string', description: 'Result id or URL' }, url: { type: 'string', description: 'URL to fetch (fallback)' } }, required: ['id'] } },
-        { name: 'set_n8n_credentials', description: 'Set default n8n host and API key for this server session', inputSchema: { type: 'object', properties: { host: { type: 'string', description: 'n8n base URL' }, api_key: { type: 'string', description: 'n8n API key' }, test: { type: 'boolean', default: true } }, required: ['host','api_key'] } },
-        { name: 'get_n8n_status', description: 'Get current n8n host and whether API key is configured', inputSchema: { type: 'object', properties: {}, required: [] } },
-      ],
+      tools: [...coreTools, ...customTools],
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
+    const name = request.params?.name;
+    const args = request.params?.arguments ?? {};
+    const coreTools = new Set(core.getTools().map((tool) => tool.name));
     try {
+      if (!name) throw new Error('Tool name is required');
+      if (coreTools.has(name)) {
+        return await core.callTool(name, args);
+      }
       switch (name) {
         case 'get_workflows':
         case 'list_workflows': {
@@ -177,6 +193,7 @@ function createMCPServer() {
           if (!host || !key) throw new Error('host and api_key are required');
           CURRENT_N8N_HOST = host;
           CURRENT_N8N_API_KEY = key;
+          refreshCoreClient();
           let test = { ok: true };
           try { await n8nRequest('/health'); } catch (e) { test = { ok: false, error: e?.message || String(e) }; }
           return { content: [{ type: 'text', text: JSON.stringify({ host, apiKeySet: !!key, test }, null, 2) }] };

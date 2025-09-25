@@ -1,14 +1,24 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { 
+import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import http from 'http';
 import { randomUUID } from 'crypto';
+import coreModule from './dist/services/mcp-server.js';
+import clientModule from './dist/services/n8n-client.js';
+
+const { McpServer } = coreModule;
+const { N8nClient } = clientModule;
 
 // N8N Configuration
 const N8N_HOST = process.env.N8N_HOST || 'https://app.right-api.com';
 const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyODQwYzIzMC04NTE4LTRhZWEtYmM4OC0zNTk1MjhiMDQ5MDgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzQ3Mjg5NjIwfQ.dclIQI4D7-3udOfM_s2A2SHUbEGTM_7D3jneWtQj5NY';
+
+const core = new McpServer(new N8nClient({
+  baseUrl: N8N_HOST,
+  apiKey: N8N_API_KEY,
+}));
 
 // Simple N8N API client
 async function n8nRequest(endpoint, options = {}) {
@@ -36,94 +46,31 @@ const sessions = new Map();
 
 // Get available tools
 async function getTools() {
-  return [
+  const coreTools = core.getTools();
+  const customTools = [
     {
-      name: "get_workflows",
-      description: "Get all N8N workflows",
+      name: "list_workflows",
+      description: "List all N8N workflows (alias)",
       inputSchema: {
         type: "object",
         properties: {},
         required: []
       }
-    },
-    {
-      name: "get_workflow",
-      description: "Get a specific N8N workflow by ID",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Workflow ID" }
-        },
-        required: ["id"]
-      }
-    },
-    {
-      name: "create_workflow",
-      description: "Create a new N8N workflow",
-      inputSchema: {
-        type: "object",
-        properties: {
-          name: { type: "string", description: "Workflow name" },
-          nodes: { type: "array", description: "Workflow nodes" },
-          connections: { type: "object", description: "Node connections" }
-        },
-        required: ["name", "nodes", "connections"]
-      }
-    },
-    {
-      name: "activate_workflow",
-      description: "Activate an N8N workflow",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Workflow ID" }
-        },
-        required: ["id"]
-      }
-    },
-    {
-      name: "deactivate_workflow",
-      description: "Deactivate an N8N workflow",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Workflow ID" }
-        },
-        required: ["id"]
-      }
-    },
-    {
-      name: "execute_workflow",
-      description: "Execute an N8N workflow",
-      inputSchema: {
-        type: "object",
-        properties: {
-          id: { type: "string", description: "Workflow ID" },
-          data: { type: "object", description: "Input data for workflow execution" }
-        },
-        required: ["id"]
-      }
-    },
-    {
-      name: "get_executions",
-      description: "Get workflow execution history",
-      inputSchema: {
-        type: "object",
-        properties: {
-          workflowId: { type: "string", description: "Filter by workflow ID" },
-          limit: { type: "number", description: "Maximum number of executions to return", default: 20 }
-        },
-        required: []
-      }
     }
   ];
+  return [...coreTools, ...customTools];
 }
 
 // Call a tool
-async function callTool(name, args) {
+async function callTool(name, args = {}) {
   console.log(`Tool called: ${name}`);
   
   try {
+    const coreToolNames = new Set(core.getTools().map((tool) => tool.name));
+    if (coreToolNames.has(name)) {
+      return await core.callTool(name, args);
+    }
+
     switch (name) {
       case "get_workflows":
         const workflows = await n8nRequest('/workflows');
@@ -133,6 +80,9 @@ async function callTool(name, args) {
             text: JSON.stringify(workflows, null, 2)
           }]
         };
+        
+      case "list_workflows":
+        return await core.callTool('get_workflows', args);
         
       case "get_workflow":
         const workflow = await n8nRequest(`/workflows/${args.id}`);
