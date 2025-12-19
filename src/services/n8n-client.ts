@@ -1,6 +1,6 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { config } from '../config';
-import { N8nWorkflow, N8nExecution } from '../types/mcp';
+import axios, { AxiosInstance, AxiosResponse } from 'axios.js';
+import { config } from '../config.js';
+import { N8nWorkflow, N8nExecution } from '../types/mcp.js';
 
 export interface N8nClientOptions {
   baseUrl?: string;
