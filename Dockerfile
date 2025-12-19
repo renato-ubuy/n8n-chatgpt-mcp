@@ -1,32 +1,31 @@
-FROM node:18-alpine
-
+# ---- build stage ----
+FROM node:18-alpine AS build
 WORKDIR /app
 
-# Copy package manifest and install production deps
-COPY package.json ./
-RUN npm install --only=production
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Copy project files
 COPY . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# This must create /app/dist (see your error about /app/dist/services/mcp-server.js)
+RUN npm run build
 
-# Create data directory for persistent storage
-RUN mkdir -p /app/data
+# ---- runtime stage ----
+FROM node:18-alpine
+WORKDIR /app
 
-# Set ownership
-RUN chown -R nodejs:nodejs /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/*.js ./
+COPY --from=build /app/healthcheck.cjs ./
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001 \
+  && mkdir -p /app/data \
+  && chown -R nodejs:nodejs /app
+
 USER nodejs
+ENV HOST=0.0.0.0
 
-# Health check (mode-aware)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node healthcheck.cjs
-
-# Expose ports for all server modes
-# SSE: 3004, WS: 3006, OAuth: 3007
-EXPOSE 3004 3006 3007
-
-# Start the application (mode via MCP_MODE=oauth|sse|ws)
-CMD ["sh", "-c", "node start.js"]
+CMD ["node", "start.js"]
