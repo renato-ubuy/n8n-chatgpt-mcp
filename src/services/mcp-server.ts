@@ -1,8 +1,16 @@
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcError, McpTool, McpToolResult, McpServerInfo, StreamingClient } from '../types/mcp';
-import { N8nClient } from './n8n-client';
-import { config } from '../config';
+import {
+  JsonRpcRequest,
+  JsonRpcResponse,
+  JsonRpcError,
+  McpTool,
+  McpToolResult,
+  McpServerInfo,
+  StreamingClient
+} from '../types/mcp.js';
+import { N8nClient } from './n8n-client.js';
+import { config } from '../config.js';
 
 export class McpServer extends EventEmitter {
   private n8nClient: N8nClient;
