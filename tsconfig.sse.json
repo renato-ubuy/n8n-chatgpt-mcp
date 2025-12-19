@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmitOnError": false
+  },
+  "include": [
+    "src/services/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.types.ts",
+    "src/**/*.type.ts",
+    "src/**/*.interface.ts",
+    "src/**/*.interfaces.ts",
+    "src/**/*.model.ts",
+    "src/**/*.models.ts",
+    "src/**/*.schema.ts",
+    "src/**/*.schemas.ts",
+    "src/**/*.util.ts",
+    "src/**/*.utils.ts"
+  ],
+  "exclude": [
+    "src/index.ts",
+    "src/routes/**",
+    "src/middleware/**",
+    "src/services/auth-service.ts"
+  ]
+}
