@@ -8,7 +8,7 @@ import http from 'http';
 import url from 'url';
 import fs from 'fs';
 import path from 'path';
-import coreModule from './dist/services/mcp-server.js';
+import * as coreModule from './dist/services/mcp-server.js';
 import * as clientModule from './dist/services/n8n-client.js';
 
 
