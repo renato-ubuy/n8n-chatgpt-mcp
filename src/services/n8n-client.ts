@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios.js';
-import { config } from '../config.js';
+import { config } from '../config/index.js';
 import { N8nWorkflow, N8nExecution } from '../types/mcp.js';
 
 export interface N8nClientOptions {
