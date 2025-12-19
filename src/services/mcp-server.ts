@@ -747,9 +747,12 @@ const payload = {
   connections: updatedWorkflow.connections,
   settings: updatedWorkflow.settings,
   tags: updatedWorkflow.tags,
-} as unknown as Partial<N8nWorkflow>;
+};
 
-const saved = await this.n8nClient.updateWorkflow(id, payload);
+const saved = await this.n8nClient.updateWorkflow(
+  id,
+  payload as unknown as Record<string, unknown>
+);
 
 
     this.broadcastToClients({ type: 'workflow_updated', workflow: saved });
