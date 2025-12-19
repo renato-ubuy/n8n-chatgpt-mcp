@@ -10,7 +10,7 @@ import {
   StreamingClient
 } from '../types/mcp.js';
 import { N8nClient } from './n8n-client.js';
-import { config } from '../config.js';
+import { config } from '../config/index.js';
 
 export class McpServer extends EventEmitter {
   private n8nClient: N8nClient;
