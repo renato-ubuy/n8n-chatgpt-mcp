@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios.js';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { config } from '../config/index.js';
 import { N8nWorkflow, N8nExecution } from '../types/mcp.js';
 
