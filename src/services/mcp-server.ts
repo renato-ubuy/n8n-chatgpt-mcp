@@ -741,13 +741,16 @@ export class McpServer extends EventEmitter {
       };
     }
 
-    const saved = await this.n8nClient.updateWorkflow(id, {
-      name: updatedWorkflow.name,
-      nodes: updatedWorkflow.nodes,
-      connections: updatedWorkflow.connections,
-      settings: updatedWorkflow.settings,
-      tags: updatedWorkflow.tags,
-    });
+const payload = {
+  name: updatedWorkflow.name,
+  nodes: updatedWorkflow.nodes,
+  connections: updatedWorkflow.connections,
+  settings: updatedWorkflow.settings,
+  tags: updatedWorkflow.tags,
+} as unknown as Partial<N8nWorkflow>;
+
+const saved = await this.n8nClient.updateWorkflow(id, payload);
+
 
     this.broadcastToClients({ type: 'workflow_updated', workflow: saved });
 
