@@ -130,7 +130,11 @@ export class McpServer extends EventEmitter {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Workflow name' },
-            nodes: { type: 'array', description: 'Workflow nodes' },
+            nodes: {
+              type: 'array',
+              description: 'Workflow nodes',
+              items: { type: 'object', additionalProperties: true },
+            },
             connections: { type: 'object', description: 'Node connections' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
           },
@@ -145,7 +149,11 @@ export class McpServer extends EventEmitter {
           properties: {
             id: { type: 'string', description: 'Workflow ID' },
             name: { type: 'string', description: 'Workflow name' },
-            nodes: { type: 'array', description: 'Workflow nodes' },
+            nodes: {
+              type: 'array',
+              description: 'Workflow nodes',
+              items: { type: 'object', additionalProperties: true },
+            },
             connections: { type: 'object', description: 'Node connections' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
           },
@@ -281,7 +289,11 @@ export class McpServer extends EventEmitter {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'Workflow name' },
-            nodes: { type: 'array', description: 'Workflow nodes' },
+            nodes: {
+              type: 'array',
+              description: 'Workflow nodes',
+              items: { type: 'object', additionalProperties: true },
+            },
             connections: { type: 'object', description: 'Workflow connections' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
           },
@@ -296,7 +308,7 @@ export class McpServer extends EventEmitter {
           properties: {
             id: { type: 'string', description: 'Workflow ID' },
             name: { type: 'string', description: 'Workflow name' },
-            nodes: { type: 'array', description: 'Complete workflow nodes' },
+            nodes: { type: 'array', description: 'Complete workflow nodes', items: { type: 'object', additionalProperties: true } },
             connections: { type: 'object', description: 'Complete workflow connections' },
             settings: { type: 'object', description: 'Workflow settings' },
             tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
