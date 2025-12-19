@@ -9,7 +9,8 @@ import url from 'url';
 import fs from 'fs';
 import path from 'path';
 import coreModule from './dist/services/mcp-server.js';
-import clientModule from './dist/services/n8n-client.js';
+import * as clientModule from './dist/services/n8n-client.js';
+
 
 const { McpServer } = coreModule;
 const { N8nClient } = clientModule;
