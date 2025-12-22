@@ -128,6 +128,7 @@ export class McpServer extends EventEmitter {
         description: 'Create a new N8N workflow',
         inputSchema: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             name: { type: 'string', description: 'Workflow name' },
             nodes: {
@@ -135,11 +136,24 @@ export class McpServer extends EventEmitter {
               description: 'Workflow nodes',
               items: { type: 'object', additionalProperties: true },
             },
-            connections: { type: 'object', description: 'Node connections', additionalProperties: true },
-            tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
+            connections: {
+              type: 'object',
+              description: 'Workflow connections',
+              additionalProperties: true,
+            },
+            settings: {
+              type: 'object',
+              description: 'Workflow settings',
+              additionalProperties: true,
+            },
+            tags: {
+              type: 'array',
+              description: 'Workflow tags',
+              items: { type: 'string' },
+            },
           },
           required: ['name', 'nodes', 'connections'],
-        },
+        }
       },
       {
         name: 'update_workflow',
@@ -289,21 +303,31 @@ export class McpServer extends EventEmitter {
       {
         name: 'n8n_create_workflow',
         description: 'Create a workflow (alias of create_workflow)',
-        inputSchema: {
-          type: 'object',
-          properties: {
+        properties: {
             name: { type: 'string', description: 'Workflow name' },
             nodes: {
               type: 'array',
               description: 'Workflow nodes',
               items: { type: 'object', additionalProperties: true },
             },
-            connections: { type: 'object', description: 'Node connections', additionalProperties: true },
-            tags: { type: 'array', items: { type: 'string' }, description: 'Workflow tags' },
+            connections: {
+              type: 'object',
+              description: 'Workflow connections',
+              additionalProperties: true,
+            },
+            settings: {
+              type: 'object',
+              description: 'Workflow settings',
+              additionalProperties: true,
+            },
+            tags: {
+              type: 'array',
+              description: 'Workflow tags',
+              items: { type: 'string' },
+            },
           },
           required: ['name', 'nodes', 'connections'],
         },
-      },
       {
         name: 'n8n_update_full_workflow',
         description: 'Update workflow by replacing nodes, connections, and settings',
@@ -331,10 +355,11 @@ export class McpServer extends EventEmitter {
               type: 'array',
               description: 'Array of operations to apply',
               items: { type: 'object', additionalProperties: true },
-            },
+            }
             validateOnly: { type: 'boolean', description: 'Validate without saving changes' },
           },
           required: ['id', 'operations'],
+          additionalProperties: false
         },
       },
       {
