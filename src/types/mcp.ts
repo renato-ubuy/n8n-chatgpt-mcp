@@ -48,10 +48,13 @@ export interface McpTool {
   description: string;
   inputSchema: {
     type: 'object';
-    properties: Record<string, any>;
+    properties?: Record<string, any>;
     required?: string[];
+    additionalProperties?: boolean | Record<string, any>;
+    [key: string]: any;
   };
 }
+
 
 export interface McpToolResult {
   content: Array<{
