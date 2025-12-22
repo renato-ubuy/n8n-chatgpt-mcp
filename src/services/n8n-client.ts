@@ -31,22 +31,28 @@ export class N8nClient {
   /**
    * List workflows with optional filters. Aligns with n8n list API semantics.
    */
+
   async getWorkflows(params?: {
-    limit?: number;
-    offset?: number;
-    active?: boolean;
-    tags?: string[];
-    search?: string;
-  }): Promise<N8nWorkflow[]> {
-    try {
-      const response: AxiosResponse<{ data: N8nWorkflow[] }> = await this.client.get('/api/v1/workflows', {
-        params: params?.tags ? { ...params, tags: params.tags.join(',') } : params,
-      });
-      return response.data.data;
-    } catch (error) {
-      throw new Error(`Failed to fetch workflows: ${error}`);
-    }
+  limit?: number;
+  active?: boolean;
+}): Promise<N8nWorkflow[]> {
+  try {
+    const qp: Record<string, any> = {};
+    if (typeof params?.limit === 'number') qp.limit = params.limit;
+    if (typeof params?.active === 'boolean') qp.active = params.active;
+
+    const response = await this.client.get('/api/v1/workflows', { params: qp });
+
+    const body: any = response.data;
+    return body?.data ?? body;
+  } catch (error) {
+    const e: any = error;
+    throw new Error(
+      `Failed to fetch workflows: status=${e.response?.status} body=${JSON.stringify(e.response?.data)}`
+    );
   }
+}
+
 
   async getWorkflow(id: string): Promise<N8nWorkflow> {
     try {
