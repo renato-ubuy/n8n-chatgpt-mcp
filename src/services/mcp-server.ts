@@ -355,7 +355,7 @@ export class McpServer extends EventEmitter {
               type: 'array',
               description: 'Array of operations to apply',
               items: { type: 'object', additionalProperties: true },
-            }
+            },
             validateOnly: { type: 'boolean', description: 'Validate without saving changes' },
           },
           required: ['id', 'operations'],
