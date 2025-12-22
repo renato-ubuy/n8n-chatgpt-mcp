@@ -304,6 +304,7 @@ export class McpServer extends EventEmitter {
         name: 'n8n_create_workflow',
         description: 'Create a workflow (alias of create_workflow)',
         inputSchema: {
+          type: 'object',
           properties: {
               name: { type: 'string', description: 'Workflow name' },
               nodes: {
