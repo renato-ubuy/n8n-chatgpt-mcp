@@ -234,18 +234,22 @@ export class McpServer extends EventEmitter {
     const enhancedTools: McpTool[] = [
       {
         name: 'n8n_list_workflows',
-        description: 'List workflows with optional filters (active, tags, pagination)',
+        description: 'List workflows (optional: limit, active)',
         inputSchema: {
           type: 'object',
+          additionalProperties: false,
           properties: {
-            active: { type: 'boolean', description: 'Filter by active status' },
-            limit: { type: 'number', description: 'Maximum workflows to return' },
-            offset: { type: 'number', description: 'Skip a number of workflows' },
-            search: { type: 'string', description: 'Search by name' },
-            tags: { type: 'array', items: { type: 'string' }, description: 'Filter by tags (any match)' },
+        limit: {
+          type: 'number',
+          description: 'Maximum workflows to return',
+          },
+        active: {
+          type: 'boolean',
+          description: 'Filter by active status',
           },
         },
       },
+    },
       {
         name: 'n8n_get_workflow',
         description: 'Get a workflow by ID with full definition',
