@@ -303,31 +303,33 @@ export class McpServer extends EventEmitter {
       {
         name: 'n8n_create_workflow',
         description: 'Create a workflow (alias of create_workflow)',
-        properties: {
-            name: { type: 'string', description: 'Workflow name' },
-            nodes: {
-              type: 'array',
-              description: 'Workflow nodes',
-              items: { type: 'object', additionalProperties: true },
+        inputSchema: {
+          properties: {
+              name: { type: 'string', description: 'Workflow name' },
+              nodes: {
+                type: 'array',
+                description: 'Workflow nodes',
+                items: { type: 'object', additionalProperties: true },
+              },
+              connections: {
+                type: 'object',
+                description: 'Workflow connections',
+                additionalProperties: true,
+              },
+              settings: {
+                type: 'object',
+                description: 'Workflow settings',
+                additionalProperties: true,
+              },
+              tags: {
+                type: 'array',
+                description: 'Workflow tags',
+                items: { type: 'string' },
+              },
             },
-            connections: {
-              type: 'object',
-              description: 'Workflow connections',
-              additionalProperties: true,
-            },
-            settings: {
-              type: 'object',
-              description: 'Workflow settings',
-              additionalProperties: true,
-            },
-            tags: {
-              type: 'array',
-              description: 'Workflow tags',
-              items: { type: 'string' },
-            },
+            required: ['name', 'nodes', 'connections'],
           },
-          required: ['name', 'nodes', 'connections'],
-        },
+      },
       {
         name: 'n8n_update_full_workflow',
         description: 'Update workflow by replacing nodes, connections, and settings',
