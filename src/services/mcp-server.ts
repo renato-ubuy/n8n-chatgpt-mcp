@@ -345,21 +345,36 @@ export class McpServer extends EventEmitter {
         },
       },
       {
-        name: 'n8n_update_partial_workflow',
-        description: 'Apply targeted operations to a workflow (add/update nodes, connections, settings)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id: { type: 'string', description: 'Workflow ID' },
-            operations: {
-              type: 'array',
-              description: 'Array of operations to apply',
-              items: { type: 'object', additionalProperties: true },
-            },
-            validateOnly: { type: 'boolean', description: 'Validate without saving changes' },
+      name: 'n8n_update_partial_workflow',
+      description: 'Apply targeted operations to a workflow (add/update nodes, connections, settings)',
+      inputSchema: {
+        type: 'object',
+
+        // ✅ Prevent unknown top-level args
+        additionalProperties: false,
+
+        properties: {
+          id: {
+          type: 'string',
+          description: 'Workflow ID',
           },
-          required: ['id', 'operations'],
-          additionalProperties: false
+
+          operations: {
+            type: 'array',
+            description: 'Array of operations to apply',
+
+            // ✅ Each operation can be any JSON shape
+            items: {
+              type: 'object',
+              additionalProperties: true,
+            },
+          },
+          validateOnly: {
+            type: 'boolean',
+            description: 'Validate without saving changes',
+          },
+        },
+        required: ['id', 'operations'],
         },
       },
       {
